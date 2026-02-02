@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Demo FeicoCRM</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+<body>
+    <div class="app">
+          <nav class="sidebar">
+                  <div class="logo">feico<span>CRM</span></div>div>
+                <div class="nav-section">SALES</div>div>
+                <a href="#" class="nav-item active" onclick="showPage('dashboard')">📊 Dashboard</a>a>
+                <a href="#" class="nav-item" onclick="showPage('kanban')">📋 Kanban</a>a>
+                <a href="#" class="nav-item" onclick="showPage('deals')">💰 Deals</a>a>
+                <a href="#" class="nav-item" onclick="showPage('customers')">👥 Customers</a>a>
+                <a href="#" class="nav-item" onclick="showPage('products')">📦 Products</a>a>
+                <div class="nav-section">OPERATIONS</div>div>
+                <a href="#" class="nav-item" onclick="showPage('inventory')">📋 Inventory</a>a>
+                <a href="#" class="nav-item" onclick="showPage('purchasing')">🛒 Purchasing</a>a>
+                <div class="nav-section">MARKETING</div>div>
+                <a href="#" class="nav-item" onclick="showPage('marketing')">📣 Campaigns</a>a>
+                <a href="#" class="nav-item" onclick="showPage('support')">🎧 Support</a>a>
+                <div class="nav-section">TOOLS</div>div>
+                <a href="#" class="nav-item" onclick="showPage('calendar')">📅 Calendar</a>a>
+                <a href="#" class="nav-item" onclick="showPage('activity')">📈 Activity</a>a>
+                <a href="#" class="nav-item" onclick="showPage('peak')">⚡ Peak Sync</a>a>
+          </nav>nav>
+        <main class="content">
+              <header class="topbar">
+                      <h1 id="pageTitle">Dashboard</h1>h1>
+                      <div class="user-info">
+                                <span class="notif-badge" onclick="toggleNotif()">🔔 3</span>
+                                <span>Sales Team</span>
+                      </div>div>
+              </header>header>
+              <div id="mainContent"></div>div>
+        </main>main>
+    </div>div>
+  <div id="notifPanel" class="notif-panel hidden">
+      <h3>Notifications</h3>
+      <div class="notif-item">🔔 Deal #345 needs price approval</div>div>
+      <div class="notif-item">📦 PO-2024-089 confirmed by supplier</div>div>
+      <div class="notif-item">⚠️ Low stock: Solar Panel 450W</div>div>
+  </div>div>
+  <div id="modal" class="modal hidden">
+      <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">×</span>
+            <div id="modalBody"></div>div>
+      </div>div>
+  </div>div>
+  <script src="script.js"></script>
+</body>
+</html>html></h3></span></span>
+</body></title>
+  </head>
