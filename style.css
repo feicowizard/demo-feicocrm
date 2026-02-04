@@ -1,7 +1,10 @@
+/* ========================================
+   ORIGINAL STYLES (UNCHANGED)
+   ======================================== */
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family: 'Segoe UI', sans-serif; background:#1a1a2e; color:#eee; }
 .app { display:flex; height:100vh; }
-.sidebar { width:200px; background:#16213e; padding:15px 0; }
+.sidebar { width:200px; background:#16213e; padding:15px 0; overflow-y:auto; }
 .logo { font-size:22px; font-weight:bold; color:#4ade80; padding:0 15px 20px; }
 .logo span { color:#fff; font-weight:normal; }
 .nav-section { font-size:10px; color:#666; padding:15px 15px 5px; letter-spacing:1px; }
@@ -46,7 +49,8 @@ th { color:#888; font-weight:normal; }
 
 .form-group { margin-bottom:15px; }
 .form-group label { display:block; margin-bottom:5px; color:#888; font-size:12px; }
-.form-group input, .form-group select { width:100%; padding:10px; background:#1a1a2e; border:1px solid #2a2a4e; border-radius:6px; color:#fff; font-size:14px; }
+.form-group input, .form-group select, .form-group textarea { width:100%; padding:10px; background:#1a1a2e; border:1px solid #2a2a4e; border-radius:6px; color:#fff; font-size:14px; }
+.form-group textarea { resize:vertical; min-height:60px; }
 
 .calc-result { background:#1a1a2e; padding:20px; border-radius:10px; margin-top:20px; }
 .calc-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #2a2a4e; }
@@ -58,7 +62,7 @@ th { color:#888; font-weight:normal; }
 .calc-value.danger { color:#ef4444; }
 
 .kanban { display:flex; gap:15px; overflow-x:auto; }
-.kanban-col { min-width:250px; background:#16213e; border-radius:10px; padding:15px; }
+.kanban-col { min-width:220px; flex:1; background:#16213e; border-radius:10px; padding:15px; }
 .kanban-col h4 { font-size:12px; color:#888; margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #2a2a4e; }
 .kanban-card { background:#1a1a2e; padding:12px; border-radius:8px; margin-bottom:10px; cursor:pointer; }
 .kanban-card:hover { border-left:3px solid #4ade80; }
@@ -90,3 +94,90 @@ th { color:#888; font-weight:normal; }
 .commission-highlight { background:#166534; padding:15px; border-radius:10px; text-align:center; margin-top:15px; }
 .commission-highlight h3 { color:#4ade80; font-size:28px; }
 .commission-highlight p { color:#888; font-size:12px; }
+
+
+/* ========================================
+   EXTENSIONS — ADDITIVE ONLY
+   ======================================== */
+
+/* --- Status badge: Lost (was missing) --- */
+.status.lost { background:#7f1d1d; color:#ef4444; }
+.status.lead { background:#1e3a5f; color:#60a5fa; }
+.status.qualified { background:#1e40af; color:#60a5fa; }
+.status.quotation { background:#854d0e; color:#fbbf24; }
+.status.negotiation { background:#6b21a8; color:#c084fc; }
+
+/* --- Kanban drag-and-drop --- */
+.kanban-col { min-height:200px; transition:background 0.15s; }
+.kanban-col.drag-over { outline:2px dashed #4ade80; outline-offset:-2px; background:#1a2940; }
+.kanban-card[draggable="true"] { cursor:grab; user-select:none; }
+.kanban-card[draggable="true"]:active { cursor:grabbing; }
+.kanban-card.dragging { opacity:0.35; }
+.kanban-count { font-size:11px; color:#4ade80; margin-left:6px; }
+
+/* Kanban card GP chip */
+.kanban-gp { display:inline-block; padding:2px 6px; border-radius:8px; font-size:10px; font-weight:bold; margin-top:4px; }
+.kanban-gp.ok { background:#166534; color:#4ade80; }
+.kanban-gp.controlled { background:#7f1d1d; color:#ef4444; }
+.kanban-gp.warn { background:#854d0e; color:#fbbf24; }
+
+/* --- Deal Diagnostic Center (modal) --- */
+.modal-content.wide { width:750px; }
+.deal-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px; gap:10px; }
+.deal-header h2 { font-size:18px; flex:1; }
+.deal-meta { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:15px; padding:12px; background:#1a1a2e; border-radius:8px; }
+.deal-meta-item { font-size:11px; color:#888; }
+.deal-meta-item span { color:#eee; font-weight:bold; display:block; margin-top:2px; font-size:13px; }
+.deal-section { margin-top:18px; }
+.deal-section-title { font-size:12px; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #2a2a4e; }
+
+/* Inline editable item inputs */
+.item-input { width:80px; padding:5px; background:#1a1a2e; border:1px solid #2a2a4e; border-radius:4px; color:#fff; font-size:12px; text-align:right; }
+.item-input:focus { border-color:#4ade80; outline:none; }
+.item-remove { background:none; border:none; color:#ef4444; cursor:pointer; font-size:14px; padding:4px 6px; }
+.item-remove:hover { color:#fff; }
+
+/* GP Badge */
+.gp-badge { display:inline-block; padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold; }
+.gp-badge.ok { background:#166534; color:#4ade80; }
+.gp-badge.controlled { background:#7f1d1d; color:#ef4444; }
+.gp-badge.warn { background:#854d0e; color:#fbbf24; }
+
+/* Stage action buttons row */
+.stage-actions { margin-top:15px; padding-top:12px; border-top:1px solid #2a2a4e; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.stage-btn { padding:8px 16px; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; }
+.stage-btn.next { background:#4ade80; color:#000; }
+.stage-btn.win { background:#166534; color:#4ade80; border:1px solid #4ade80; }
+.stage-btn.lose { background:#374151; color:#ef4444; }
+.stage-btn:disabled { opacity:0.3; cursor:not-allowed; }
+.stage-btn.lose:hover:not(:disabled) { background:#7f1d1d; }
+
+/* Activity timeline inside deal */
+.timeline-item { padding:8px 0; border-left:2px solid #2a2a4e; margin-left:6px; padding-left:14px; position:relative; }
+.timeline-item::before { content:''; position:absolute; left:-5px; top:12px; width:8px; height:8px; background:#4ade80; border-radius:50%; }
+.timeline-item .tl-time { font-size:10px; color:#666; }
+.timeline-item .tl-msg { font-size:12px; color:#ccc; margin-top:2px; }
+
+/* --- Dashboard: Pipeline bar chart --- */
+.pipeline-bar { display:flex; align-items:center; margin-bottom:8px; }
+.pipeline-bar .bar-label { width:100px; font-size:12px; color:#888; flex-shrink:0; }
+.pipeline-bar .bar-track { flex:1; height:24px; background:#1a1a2e; border-radius:4px; overflow:hidden; margin:0 10px; }
+.pipeline-bar .bar-fill { height:100%; border-radius:4px; display:flex; align-items:center; padding-left:8px; font-size:10px; color:#000; font-weight:bold; min-width:2px; transition:width 0.3s; }
+.pipeline-bar .bar-value { font-size:12px; color:#eee; min-width:90px; text-align:right; flex-shrink:0; }
+
+/* Dashboard chart containers */
+.chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:15px; }
+.chart-box { background:#16213e; border-radius:10px; padding:15px; }
+.chart-box h4 { font-size:12px; color:#888; margin-bottom:12px; }
+
+/* GP Approval form inside modal */
+.approval-box { background:#1a1a2e; border:1px solid #ef4444; border-radius:8px; padding:15px; margin-top:12px; }
+.approval-box h4 { color:#ef4444; font-size:13px; margin-bottom:10px; }
+
+/* Read-only deal (Won/Lost) */
+.deal-locked-banner { background:#854d0e; color:#fbbf24; padding:10px; border-radius:6px; font-size:12px; text-align:center; margin-bottom:15px; }
+
+/* Add item row */
+.add-item-row { display:flex; gap:8px; align-items:center; margin-top:8px; }
+.add-item-row select, .add-item-row input { padding:6px; background:#1a1a2e; border:1px solid #2a2a4e; border-radius:4px; color:#fff; font-size:12px; }
+.add-item-row select { flex:1; }
