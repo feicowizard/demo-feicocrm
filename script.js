@@ -434,7 +434,9 @@ const titles = {
   approvals:'Approvals', calendar:'Calendar', activity:'Activity', peak:'Peak Sync'
 };
 
+let currentPage = 'dashboard';
 function showPage(page) {
+  currentPage = page;
   document.getElementById('pageTitle').textContent = titles[page] || page;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const navItems = document.querySelectorAll('.nav-item');
@@ -443,6 +445,13 @@ function showPage(page) {
   // Close notif panel + refresh badge
   document.getElementById('notifPanel').classList.add('hidden');
   updateNotifBadge();
+  // Close sidebar on mobile
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay')?.classList.add('hidden');
+  // Clear global search
+  const gs = document.getElementById('globalSearch');
+  if (gs) gs.value = '';
+  document.getElementById('globalSearchResults')?.classList.add('hidden');
 }
 
 function toggleNotif() {
@@ -500,6 +509,13 @@ content.dashboard = function() {
   const maxOwner = Math.max(...ownerData.map(o => o.total), 1);
 
   return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+      <div style="font-size:12px;color:#888">Role: <span style="color:#4ade80">${rolePermissions[currentRole].label}</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" style="font-size:11px;padding:6px 12px" onclick="exportDashboardCSV()">📤 Export CSV</button>
+        <button class="btn btn-secondary" style="font-size:11px;padding:6px 12px" onclick="resetOnboarding()">❓ Tour</button>
+      </div>
+    </div>
     <div class="cards">
       <div class="card"><h3>Pipeline Value</h3><div class="value">${formatBaht(kpi.pipeline)}</div><div class="sub">${kpi.activeCount} active deals</div></div>
       <div class="card"><h3>Closed Won</h3><div class="value">${formatBaht(kpi.closedWon)}</div><div class="sub">${kpi.wonCount} deals</div></div>
@@ -718,7 +734,7 @@ function openDealDetail(dealId) {
   if (comp.gpPercent < GP_THRESHOLD && !isLocked) {
     if (deal.gpApproval && deal.gpApproval.status === 'Pending') {
       gpApprovalHTML = `<div class="approval-box"><h4>⏳ GP Approval Pending</h4><p style="font-size:12px;color:#888">Reason: ${deal.gpApproval.reason}</p>
-        <button class="btn btn-primary" style="margin-top:8px" onclick="approveGP('${dealId}');openDealDetail('${dealId}')">✅ Approve (Manager)</button></div>`;
+        <button class="btn btn-primary" style="margin-top:8px" ${hasPermission('canApprove') ? `onclick="approveGP('${dealId}');openDealDetail('${dealId}')"` : 'disabled title="ต้องใช้ Role Manager หรือ Admin"'}>✅ Approve (Manager)</button></div>`;
     } else if (deal.gpApproval && deal.gpApproval.status === 'Approved') {
       gpApprovalHTML = `<div class="approval-box" style="border-color:#4ade80"><h4 style="color:#4ade80">✅ GP Approved</h4><p style="font-size:12px;color:#888">By ${deal.gpApproval.approvedBy} on ${deal.gpApproval.approvedAt}</p></div>`;
     } else {
@@ -891,16 +907,35 @@ content.deals = function() {
   return `
     <div class="search-box">
       <input type="text" placeholder="Search deals..." onkeyup="filterDeals(this.value)">
+      <button class="btn btn-secondary" style="font-size:11px" onclick="exportDealsCSV()">📤 Export CSV</button>
       <button class="btn btn-primary" onclick="openNewDealModal()">+ New Deal</button>
     </div>
+    ${hasPermission('canBulk') ? `
+    <div id="bulkBar" class="bulk-bar hidden">
+      <span id="bulkCount">0 selected</span>
+      <select id="bulkStage" style="padding:6px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:4px;color:#fff;font-size:12px">
+        <option value="">— Change Stage —</option>
+        <option value="Lead">Lead</option><option value="Qualified">Qualified</option><option value="Quotation">Quotation</option><option value="Negotiation">Negotiation</option>
+      </select>
+      <select id="bulkOwner" style="padding:6px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:4px;color:#fff;font-size:12px">
+        <option value="">— Assign Owner —</option>
+        <option>สมชาย</option><option>วิชัย</option>
+      </select>
+      <button class="btn btn-primary" style="font-size:11px;padding:6px 12px" onclick="applyBulkAction()">Apply</button>
+      <button class="btn btn-secondary" style="font-size:11px;padding:6px 12px" onclick="clearBulkSelection()">Clear</button>
+    </div>` : ''}
     <div class="table-container">
       <table id="dealsTable">
-        <tr><th>Deal</th><th>Customer</th><th>Value</th><th>GP%</th><th>Stage</th><th>Owner</th><th>Created</th></tr>
+        <tr>
+          ${hasPermission('canBulk') ? '<th><input type="checkbox" onchange="toggleAllDeals(this.checked)"></th>' : ''}
+          <th>Deal</th><th>Customer</th><th>Value</th><th>GP%</th><th>Stage</th><th>Owner</th><th>Created</th>
+        </tr>
         ${deals.map(d => {
           const comp = computeDeal(d);
           const cust = getCustomer(d.customerId);
-          return `<tr style="cursor:pointer" onclick="openDealDetail('${d.id}')">
-            <td><strong>${d.name}</strong><br><span style="color:#666;font-size:11px">${d.id}</span></td>
+          return `<tr>
+            ${hasPermission('canBulk') ? `<td onclick="event.stopPropagation()"><input type="checkbox" class="deal-checkbox" value="${d.id}" onchange="updateBulkBar()"></td>` : ''}
+            <td style="cursor:pointer" onclick="openDealDetail('${d.id}')"><strong>${d.name}</strong><br><span style="color:#666;font-size:11px">${d.id}</span></td>
             <td>${cust?.name||'—'}</td>
             <td>${formatBaht(comp.totalSell)}</td>
             <td><span class="gp-badge ${gpClass(comp.gpPercent)}">${comp.gpPercent.toFixed(1)}%</span></td>
@@ -919,6 +954,45 @@ function filterDeals(q) {
   document.querySelectorAll('#dealsTable tr:not(:first-child)').forEach(row => {
     row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
   });
+}
+
+// Bulk actions
+function toggleAllDeals(checked) {
+  document.querySelectorAll('.deal-checkbox').forEach(cb => cb.checked = checked);
+  updateBulkBar();
+}
+function updateBulkBar() {
+  const checked = document.querySelectorAll('.deal-checkbox:checked');
+  const bar = document.getElementById('bulkBar');
+  if (!bar) return;
+  if (checked.length > 0) {
+    bar.classList.remove('hidden');
+    document.getElementById('bulkCount').textContent = checked.length + ' selected';
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+function getSelectedDealIds() {
+  return [...document.querySelectorAll('.deal-checkbox:checked')].map(cb => cb.value);
+}
+function applyBulkAction() {
+  const ids = getSelectedDealIds();
+  if (ids.length === 0) return;
+  const newStage = document.getElementById('bulkStage').value;
+  const newOwner = document.getElementById('bulkOwner').value;
+  let changes = 0;
+  ids.forEach(id => {
+    const deal = deals.find(d => d.id === id);
+    if (!deal || deal.stage === 'Won' || deal.stage === 'Lost') return;
+    if (newStage) { changeStage(id, newStage); changes++; }
+    if (newOwner) { deal.owner = newOwner; logActivity(id, 'system', `Owner changed to ${newOwner}`, currentRole); changes++; }
+  });
+  if (changes > 0) showPage('deals');
+  else alert('ไม่สามารถเปลี่ยน Deal ที่ Won/Lost ได้');
+}
+function clearBulkSelection() {
+  document.querySelectorAll('.deal-checkbox').forEach(cb => cb.checked = false);
+  updateBulkBar();
 }
 
 function openNewDealModal() {
@@ -1459,6 +1533,13 @@ function openTicketDetail(id) {
 // ────────────────────────────
 
 content.hr = function() {
+  if (!hasPermission('canViewHR') && currentRole === 'sales') {
+    return `<div style="text-align:center;padding:60px 20px">
+      <div style="font-size:48px;margin-bottom:15px">🔒</div>
+      <h3 style="margin-bottom:10px">Access Restricted</h3>
+      <p style="color:#888;font-size:13px">หน้า HR Portal สำหรับ Manager / Admin เท่านั้น<br>ลองสลับ Role ที่มุมขวาบน</p>
+    </div>`;
+  }
   const pending = leaveRequests.filter(l => l.status === 'Pending').length;
   return `
     <div class="cards">
@@ -1742,4 +1823,175 @@ content.peak = function() {
 document.addEventListener('DOMContentLoaded', function() {
   showPage('dashboard');
   updateNotifBadge();
+  initTheme();
+  initRole();
+  if (!localStorage.getItem('feicoOnboarded')) startOnboarding();
 });
+
+// ========================================
+// MOBILE SIDEBAR
+// ========================================
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('hidden');
+}
+
+// ========================================
+// THEME TOGGLE (Dark / Light)
+// ========================================
+let currentTheme = 'dark';
+function initTheme() {
+  currentTheme = localStorage.getItem('feicoTheme') || 'dark';
+  applyTheme(currentTheme);
+}
+function toggleTheme() {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  applyTheme(currentTheme);
+  localStorage.setItem('feicoTheme', currentTheme);
+}
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.querySelector('.theme-toggle');
+  if (btn) btn.textContent = theme === 'dark' ? '🌙' : '☀️';
+}
+
+// ========================================
+// ROLE SIMULATION
+// ========================================
+let currentRole = 'sales';
+const rolePermissions = {
+  admin:   { canApprove:true, canDelete:true, canExport:true, canViewHR:true, canBulk:true, label:'👑 Admin' },
+  manager: { canApprove:true, canDelete:false, canExport:true, canViewHR:true, canBulk:true, label:'👔 Manager' },
+  sales:   { canApprove:false, canDelete:false, canExport:true, canViewHR:false, canBulk:false, label:'💼 Sales' }
+};
+function initRole() {
+  currentRole = localStorage.getItem('feicoRole') || 'sales';
+  const sel = document.getElementById('roleSelector');
+  if (sel) sel.value = currentRole;
+}
+function switchRole(role) {
+  currentRole = role;
+  localStorage.setItem('feicoRole', role);
+  showPage(currentPage || 'dashboard');
+}
+function hasPermission(perm) { return rolePermissions[currentRole]?.[perm] || false; }
+
+// ========================================
+// GLOBAL SEARCH
+// ========================================
+function globalSearch(q) {
+  const resultsEl = document.getElementById('globalSearchResults');
+  if (!q || q.length < 2) { resultsEl.classList.add('hidden'); return; }
+  q = q.toLowerCase();
+  const results = [];
+
+  // Search deals
+  deals.filter(d => d.name.toLowerCase().includes(q) || d.id.toLowerCase().includes(q))
+    .slice(0,3).forEach(d => results.push({ icon:'💰', text:d.name, sub:d.stage + ' — ' + formatBaht(computeDeal(d).totalSell), action:`openDealDetail('${d.id}')` }));
+  // Search customers
+  customers.filter(c => c.name.toLowerCase().includes(q) || c.company?.toLowerCase().includes(q))
+    .slice(0,3).forEach(c => results.push({ icon:'👥', text:c.name, sub:c.company || c.type, action:`showPage('customers')` }));
+  // Search products
+  products.filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
+    .slice(0,3).forEach(p => results.push({ icon:'📦', text:p.name, sub:p.sku + ' — ' + formatBahtFull(p.sellPrice), action:`showPage('products')` }));
+  // Search tickets
+  tickets.filter(t => t.subject.toLowerCase().includes(q) || t.id.toLowerCase().includes(q))
+    .slice(0,2).forEach(t => results.push({ icon:'🎧', text:t.subject, sub:t.status, action:`openTicketDetail('${t.id}')` }));
+  // Search campaigns
+  campaigns.filter(c => c.name.toLowerCase().includes(q))
+    .slice(0,2).forEach(c => results.push({ icon:'📣', text:c.name, sub:c.stage, action:`openCampaignDetail('${c.id}')` }));
+
+  if (results.length === 0) {
+    resultsEl.innerHTML = '<div class="gsr-item" style="color:#666">ไม่พบผลลัพธ์</div>';
+  } else {
+    resultsEl.innerHTML = results.map(r => `
+      <div class="gsr-item" onmousedown="${r.action}">
+        <span class="gsr-icon">${r.icon}</span>
+        <div class="gsr-text"><div class="gsr-title">${r.text}</div><div class="gsr-sub">${r.sub}</div></div>
+      </div>
+    `).join('');
+  }
+  resultsEl.classList.remove('hidden');
+}
+
+// ========================================
+// EXPORT CSV
+// ========================================
+function exportDealsCSV() {
+  const headers = ['Deal ID','Name','Customer','Stage','Total Sell','GP%','Owner','Won At'];
+  const rows = deals.map(d => {
+    const calc = computeDeal(d);
+    const cust = getCustomer(d.customerId);
+    return [d.id, d.name, cust?.name||'', d.stage, calc.totalSell, calc.gpPercent.toFixed(2)+'%', d.owner, d.wonAt||''];
+  });
+  let csv = headers.join(',') + '\n' + rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  downloadFile(csv, 'deals-export.csv', 'text/csv');
+}
+function exportDashboardCSV() {
+  const activeDeals = deals.filter(d => !['Won','Lost'].includes(d.stage));
+  const wonDeals = deals.filter(d => d.stage === 'Won');
+  const lines = [
+    'Metric,Value',
+    'Pipeline Value,' + activeDeals.reduce((s,d)=>s+computeDeal(d).totalSell,0),
+    'Closed Won,' + wonDeals.reduce((s,d)=>s+computeDeal(d).totalSell,0),
+    'Win Rate,' + (deals.length>0?(wonDeals.length/deals.length*100).toFixed(1)+'%':'0%'),
+    'Active Deals,' + activeDeals.length,
+    'Won Deals,' + wonDeals.length,
+    'Lost Deals,' + deals.filter(d=>d.stage==='Lost').length,
+    '',
+    'Deal ID,Name,Stage,Value,GP%'
+  ];
+  deals.forEach(d => {
+    const calc = computeDeal(d);
+    lines.push(`${d.id},${d.name},${d.stage},${calc.totalSell},${calc.gpPercent.toFixed(2)}%`);
+  });
+  downloadFile(lines.join('\n'), 'dashboard-export.csv', 'text/csv');
+}
+function downloadFile(content, filename, type) {
+  const blob = new Blob(['\uFEFF'+content], { type: type+';charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ========================================
+// ONBOARDING TOUR
+// ========================================
+let onboardStep = 0;
+const onboardSteps = [
+  { title:'👋 ยินดีต้อนรับสู่ FeicoCRM!', body:'ระบบ CRM ที่ออกแบบมาสำหรับธุรกิจ Solar & Energy<br><br>มาดูฟีเจอร์หลักกันเลย' },
+  { title:'📋 Kanban Board', body:'ลาก-วาง Deal ผ่าน stage ได้เลย<br>Lead → Qualified → Quotation → Negotiation → Won<br><br>ระบบจะ <b>บล็อกถ้า GP ต่ำกว่า 3%</b>' },
+  { title:'💰 Deal Diagnostic Center', body:'คลิกที่ Deal card ใดๆ เพื่อเปิดศูนย์วิเคราะห์<br>แก้ไขรายการ ดู GP ข้ออนุมัติ ดู PO และ PEAK ได้ครบ' },
+  { title:'🔍 Global Search', body:'ค้นหาข้ามทุก module ได้เลย — deals, ลูกค้า, สินค้า, ticket, campaign<br>พิมพ์ที่ช่องค้นหาด้านบน' },
+  { title:'👤 Role Simulation', body:'ลองสลับ Role ที่มุมขวาบน<br><b>Admin</b> = เห็นทุกอย่าง + approve ได้<br><b>Manager</b> = approve + bulk actions<br><b>Sales</b> = จัดการ deal ตัวเอง' },
+  { title:'🌙 Dark/Light Mode', body:'กดปุ่ม 🌙 ที่ topbar เพื่อสลับธีม<br>ระบบจะจำค่าที่เลือกไว้' },
+  { title:'📤 Export Data', body:'กดปุ่ม Export ในหน้า Dashboard หรือ Deals เพื่อดาวน์โหลด CSV<br>เปิดใน Excel ได้เลย' },
+  { title:'✅ พร้อมใช้งาน!', body:'ลองสำรวจแต่ละ module ได้เลยครับ<br>ทุกข้อมูลเป็น demo data — ทดลองได้อย่างอิสระ' }
+];
+function startOnboarding() {
+  onboardStep = 0;
+  renderOnboardStep();
+  document.getElementById('onboardingOverlay').classList.remove('hidden');
+}
+function nextOnboardStep() {
+  onboardStep++;
+  if (onboardStep >= onboardSteps.length) { endOnboarding(); return; }
+  renderOnboardStep();
+}
+function endOnboarding() {
+  document.getElementById('onboardingOverlay').classList.add('hidden');
+  localStorage.setItem('feicoOnboarded', '1');
+}
+function renderOnboardStep() {
+  const step = onboardSteps[onboardStep];
+  document.getElementById('onboardingContent').innerHTML = `
+    <h2 style="margin-bottom:12px">${step.title}</h2>
+    <p style="font-size:14px;line-height:1.8;color:#ccc">${step.body}</p>
+  `;
+  document.getElementById('onboardingDots').innerHTML = onboardSteps.map((_, i) =>
+    `<span class="ob-dot ${i===onboardStep?'active':''}""></span>`
+  ).join('');
+  document.getElementById('onboardNext').textContent = onboardStep === onboardSteps.length-1 ? 'เริ่มใช้งาน 🚀' : 'ถัดไป →';
+}
+function resetOnboarding() { localStorage.removeItem('feicoOnboarded'); startOnboarding(); }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-theme="dark">
   <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,8 @@
   </head>
 <body>
     <div class="app">
-          <nav class="sidebar">
+          <div class="sidebar-overlay hidden" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+          <nav class="sidebar" id="sidebar">
                   <div class="logo">feico<span>CRM</span></div>
                 <div class="nav-section">SALES</div>
                 <a href="#" class="nav-item active" onclick="showPage('dashboard')">📊 Dashboard</a>
@@ -34,10 +35,24 @@
           </nav>
         <main class="content">
               <header class="topbar">
-                      <h1 id="pageTitle">Dashboard</h1>
+                      <div class="topbar-left">
+                        <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                        <h1 id="pageTitle">Dashboard</h1>
+                      </div>
+                      <div class="topbar-center">
+                        <div class="global-search-wrap">
+                          <input type="text" id="globalSearch" class="global-search-input" placeholder="🔍 ค้นหาทุกอย่าง..." onkeyup="globalSearch(this.value)" onfocus="this.parentElement.classList.add('focused')" onblur="setTimeout(()=>this.parentElement.classList.remove('focused'),200)">
+                          <div id="globalSearchResults" class="global-search-results hidden"></div>
+                        </div>
+                      </div>
                       <div class="user-info">
+                                <button class="theme-toggle" onclick="toggleTheme()" title="เปลี่ยนธีม">🌙</button>
                                 <span class="notif-badge" onclick="toggleNotif()">🔔 3</span>
-                                <span>Sales Team</span>
+                                <select id="roleSelector" class="role-selector" onchange="switchRole(this.value)">
+                                  <option value="admin">👑 Admin</option>
+                                  <option value="manager">👔 Manager</option>
+                                  <option value="sales" selected>💼 Sales</option>
+                                </select>
                       </div>
               </header>
               <div id="mainContent"></div>
@@ -54,6 +69,18 @@
             <span class="close-btn" onclick="closeModal()">×</span>
             <div id="modalBody"></div>
       </div>
+  </div>
+  <div id="onboardingOverlay" class="onboarding-overlay hidden">
+    <div class="onboarding-card">
+      <div id="onboardingContent"></div>
+      <div class="onboarding-nav">
+        <span id="onboardingDots"></span>
+        <div>
+          <button class="btn btn-secondary" id="onboardSkip" onclick="endOnboarding()">ข้าม</button>
+          <button class="btn btn-primary" id="onboardNext" onclick="nextOnboardStep()">ถัดไป →</button>
+        </div>
+      </div>
+    </div>
   </div>
   <script src="script.js"></script>
 </body>
