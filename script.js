@@ -134,10 +134,45 @@ let peakSyncs = [
 
 // Deal Comments (collaboration layer)
 let dealComments = [
-  { id:'CMT-001', dealId:'DEAL-001', user:'วิชัย', message:'ลูกค้าขอ discount เพิ่ม 3% สำหรับ panel', timestamp:'2025-01-26 10:30' },
-  { id:'CMT-002', dealId:'DEAL-001', user:'สมชาย', message:'รอยืนยันจาก supplier ก่อนลดราคาได้', timestamp:'2025-01-26 14:00' },
-  { id:'CMT-003', dealId:'DEAL-004', user:'วิชัย', message:'ลูกค้า confirm PO แล้ว รอจัดส่ง', timestamp:'2025-01-28 09:00' },
-  { id:'CMT-004', dealId:'DEAL-002', user:'สมชาย', message:'เสนอ Battery เพิ่มแต่ลูกค้ายังไม่ตัดสินใจ', timestamp:'2025-01-22 11:15' }
+  { id:'CMT-001', dealId:'DEAL-001', user:'วิชัย', message:'ลูกค้าขอ discount เพิ่ม 3% สำหรับ panel', timestamp:'2025-01-26 10:30', tags:['สมชาย'] },
+  { id:'CMT-002', dealId:'DEAL-001', user:'สมชาย', message:'รอยืนยันจาก supplier ก่อนลดราคาได้', timestamp:'2025-01-26 14:00', tags:[] },
+  { id:'CMT-003', dealId:'DEAL-004', user:'วิชัย', message:'ลูกค้า confirm PO แล้ว รอจัดส่ง', timestamp:'2025-01-28 09:00', tags:[] },
+  { id:'CMT-004', dealId:'DEAL-002', user:'สมชาย', message:'เสนอ Battery เพิ่มแต่ลูกค้ายังไม่ตัดสินใจ', timestamp:'2025-01-22 11:15', tags:['วิชัย'] }
+];
+
+// Team Members (for tagging & assignment)
+const teamMembers = [
+  { id:'USR-001', name:'สมชาย', role:'Sales', team:'Sales A', avatar:'👨‍💼' },
+  { id:'USR-002', name:'วิชัย', role:'Sales', team:'Sales A', avatar:'👨‍💻' },
+  { id:'USR-003', name:'สมศรี', role:'Sales', team:'Sales B', avatar:'👩‍💼' },
+  { id:'USR-004', name:'Manager', role:'Manager', team:'Management', avatar:'👔' },
+  { id:'USR-005', name:'Marketing', role:'Marketing', team:'Marketing', avatar:'📣' },
+  { id:'USR-006', name:'Admin', role:'Admin', team:'Management', avatar:'👑' }
+];
+
+// Tasks (assignment system)
+let tasks = [
+  { id:'TSK-001', title:'ติดตามใบเสนอราคา Solar Rooftop 100kW', description:'ลูกค้ายังไม่ตอบกลับ ติดตามภายในสัปดาห์นี้', assignedTo:'สมชาย', assignedBy:'Manager', dealId:'DEAL-001', dueDate:'2025-02-10', status:'In Progress', priority:'High', createdAt:'2025-02-01' },
+  { id:'TSK-002', title:'เตรียมข้อมูล Technical Spec', description:'เตรียม spec สำหรับ Office Building 50kW', assignedTo:'วิชัย', assignedBy:'Manager', dealId:'DEAL-002', dueDate:'2025-02-08', status:'Open', priority:'Medium', createdAt:'2025-02-02' },
+  { id:'TSK-003', title:'สำรวจหน้างาน Factory Rooftop', description:'นัดสำรวจหน้างานกับลูกค้า', assignedTo:'สมชาย', assignedBy:'Manager', dealId:'DEAL-003', dueDate:'2025-02-15', status:'Open', priority:'High', createdAt:'2025-02-03' },
+  { id:'TSK-004', title:'ส่ง Campaign Report Q1', description:'สรุปผล campaign Q1 ส่ง management', assignedTo:'Marketing', assignedBy:'Manager', dealId:null, dueDate:'2025-02-20', status:'Open', priority:'Low', createdAt:'2025-02-05' }
+];
+
+// Targets (org → team → individual)
+let targets = [
+  { id:'TGT-001', type:'org', name:'Revenue Target Q1', metric:'revenue', targetValue:15000000, period:'2025-Q1', owner:'Organization' },
+  { id:'TGT-002', type:'org', name:'Win Rate Target', metric:'winRate', targetValue:35, period:'2025-Q1', owner:'Organization' },
+  { id:'TGT-003', type:'team', name:'Sales A Revenue', metric:'revenue', targetValue:8000000, period:'2025-Q1', owner:'Sales A' },
+  { id:'TGT-004', type:'team', name:'Sales B Revenue', metric:'revenue', targetValue:7000000, period:'2025-Q1', owner:'Sales B' },
+  { id:'TGT-005', type:'individual', name:'สมชาย Revenue', metric:'revenue', targetValue:5000000, period:'2025-Q1', owner:'สมชาย' },
+  { id:'TGT-006', type:'individual', name:'วิชัย Revenue', metric:'revenue', targetValue:4000000, period:'2025-Q1', owner:'วิชัย' },
+  { id:'TGT-007', type:'individual', name:'สมชาย Deals Won', metric:'dealsWon', targetValue:5, period:'2025-Q1', owner:'สมชาย' }
+];
+
+// Campaign attachments
+let campaignAttachments = [
+  { id:'ATT-001', campaignId:'CMP-001', name:'Banner_FB_1080x1080.jpg', type:'image', size:'245 KB', uploadedBy:'Marketing', uploadedAt:'2025-01-06' },
+  { id:'ATT-002', campaignId:'CMP-001', name:'Ad_Copy_v2.pdf', type:'file', size:'1.2 MB', uploadedBy:'Marketing', uploadedAt:'2025-01-07' }
 ];
 
 // HR data (preserved from original)
@@ -351,15 +386,17 @@ function updateDealItems(dealId, items) {
   deal.items = items;
 }
 
-function addComment(dealId, message, user) {
+function addComment(dealId, message, user, tags) {
   user = user || 'สมชาย';
+  tags = tags || [];
   const cmt = {
     id: nextId('CMT', dealComments),
-    dealId, user, message,
+    dealId, user, message, tags,
     timestamp: new Date().toLocaleString('sv-SE').replace(',','')
   };
   dealComments.push(cmt);
-  logActivity(dealId, 'comment', `💬 ${user}: ${message}`, user);
+  const tagText = tags.length > 0 ? ` (tagged: ${tags.join(', ')})` : '';
+  logActivity(dealId, 'comment', `💬 ${user}: ${message}${tagText}`, user);
   return cmt;
 }
 
@@ -431,7 +468,8 @@ const titles = {
   dashboard:'Dashboard', kanban:'Kanban Board', deals:'Deals', customers:'Customers',
   products:'Products', pricebook:'Pricebook', inventory:'Inventory', purchasing:'Purchasing',
   marketing:'Campaigns', support:'Support', hr:'HR Portal', leave:'Leave Request',
-  approvals:'Approvals', calendar:'Calendar', activity:'Activity', peak:'Peak Sync'
+  approvals:'Approvals', calendar:'Calendar', activity:'Activity', peak:'Peak Sync',
+  tasks:'Tasks', targets:'Targets', performance:'Performance'
 };
 
 let currentPage = 'dashboard';
@@ -800,26 +838,39 @@ function openDealDetail(dealId) {
       </table></div>` : ''}
 
     <div class="deal-section">
-      <div class="deal-section-title">Comments & Notes</div>
+      <div class="deal-section-title">💬 Chat / Comments</div>
       ${!isLocked ? `
-        <div class="comment-input-row">
-          <select id="commentUser" style="width:100px;padding:6px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:4px;color:#fff;font-size:12px">
-            <option>สมชาย</option><option>วิชัย</option><option>Manager</option>
+        <div class="chat-mini-input">
+          <select id="commentUser" class="chat-user-select">
+            ${teamMembers.map(m => `<option value="${m.name}">${m.avatar} ${m.name}</option>`).join('')}
           </select>
-          <input type="text" id="commentInput" placeholder="เพิ่ม comment..." style="flex:1;padding:6px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:4px;color:#fff;font-size:12px"
-                 onkeydown="if(event.key==='Enter')submitComment('${dealId}')">
-          <button class="btn btn-primary" style="font-size:11px;padding:6px 12px" onclick="submitComment('${dealId}')">Send</button>
+          <div class="chat-input-wrap">
+            <input type="text" id="commentInput" placeholder="พิมพ์ข้อความ... ใช้ @ชื่อ เพื่อ tag" style="flex:1;padding:8px 12px;background:var(--bg-primary,#1a1a2e);border:1px solid #2a2a4e;border-radius:20px;color:#fff;font-size:12px"
+                   onkeydown="if(event.key==='Enter')submitComment('${dealId}')">
+            <button class="btn btn-primary" style="font-size:11px;padding:6px 14px;border-radius:20px" onclick="submitComment('${dealId}')">Send</button>
+          </div>
+        </div>
+        <div class="chat-quick-tags">
+          ${teamMembers.slice(0,5).map(m => `<span class="quick-tag" onclick="document.getElementById('commentInput').value+=' @${m.name} '">${m.avatar} ${m.name}</span>`).join('')}
         </div>
       ` : ''}
+      <div class="chat-messages">
       ${dealComments.filter(c => c.dealId === dealId).sort((a,b) => b.timestamp.localeCompare(a.timestamp)).length === 0
-        ? '<p style="color:#666;font-size:12px;margin-top:8px">No comments yet</p>'
-        : dealComments.filter(c => c.dealId === dealId).sort((a,b) => b.timestamp.localeCompare(a.timestamp)).map(c => `
-          <div class="comment-item">
-            <div class="comment-user">${c.user}</div>
-            <div class="comment-msg">${c.message}</div>
-            <div class="comment-time">${c.timestamp}</div>
-          </div>
-        `).join('')}
+        ? '<p style="color:#666;font-size:12px;padding:10px">ยังไม่มีข้อความ</p>'
+        : dealComments.filter(c => c.dealId === dealId).sort((a,b) => b.timestamp.localeCompare(a.timestamp)).map(c => {
+          const member = teamMembers.find(m => m.name === c.user);
+          const highlightedMsg = c.message.replace(/@(\S+)/g, '<span class="chat-tag-mention">@$1</span>');
+          return `<div class="chat-bubble">
+            <div class="chat-bubble-header">
+              <span class="chat-avatar">${member?.avatar||'👤'}</span>
+              <span class="chat-name">${c.user}</span>
+              <span class="chat-time">${c.timestamp}</span>
+            </div>
+            <div class="chat-bubble-body">${highlightedMsg}</div>
+            ${c.tags && c.tags.length > 0 ? `<div class="chat-bubble-tags">${c.tags.map(t => `<span class="chat-tag-chip">@${t}</span>`).join('')}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
     </div>
 
     <div class="deal-section">
@@ -867,7 +918,10 @@ function submitComment(dealId) {
   const msg = document.getElementById('commentInput')?.value?.trim();
   if (!msg) return;
   const user = document.getElementById('commentUser')?.value || 'สมชาย';
-  addComment(dealId, msg, user);
+  // Extract @tags from message
+  const tagMatches = msg.match(/@(\S+)/g) || [];
+  const tags = tagMatches.map(t => t.replace('@',''));
+  addComment(dealId, msg, user, tags);
   openDealDetail(dealId);
 }
 function doStageChange(dealId, stage) {
@@ -904,7 +958,9 @@ function simulatePeakSync(peakId) {
 // ────────────────────────────
 
 content.deals = function() {
+  const filteredDeals = filterByDate(deals, 'createdAt');
   return `
+    ${renderDateFilter('deals')}
     <div class="search-box">
       <input type="text" placeholder="Search deals..." onkeyup="filterDeals(this.value)">
       <button class="btn btn-secondary" style="font-size:11px" onclick="exportDealsCSV()">📤 Export CSV</button>
@@ -930,7 +986,7 @@ content.deals = function() {
           ${hasPermission('canBulk') ? '<th><input type="checkbox" onchange="toggleAllDeals(this.checked)"></th>' : ''}
           <th>Deal</th><th>Customer</th><th>Value</th><th>GP%</th><th>Stage</th><th>Owner</th><th>Created</th>
         </tr>
-        ${deals.map(d => {
+        ${filteredDeals.map(d => {
           const comp = computeDeal(d);
           const cust = getCustomer(d.customerId);
           return `<tr>
@@ -1252,15 +1308,21 @@ content.purchasing = function() {
 };
 
 // ────────────────────────────
-// 13) MARKETING (STAGES)
+// 13) MARKETING — KANBAN + ATTACHMENTS + COMMENTS + TAGGING
 // ────────────────────────────
 
 let campaigns = [
-  { id:'CMP-001', name:'Solar Rooftop Promotion Q1', stage:'Published', channel:'Facebook Ads', budget:50000, leads:12, owner:'Marketing Team', createdAt:'2025-01-05' },
-  { id:'CMP-002', name:'Trade Show 2025 March', stage:'Scheduled', channel:'Event', budget:150000, leads:0, owner:'Marketing Team', createdAt:'2025-01-15' },
-  { id:'CMP-003', name:'Google Ads — Inverter', stage:'Draft', channel:'Google Ads', budget:30000, leads:0, owner:'Marketing Team', createdAt:'2025-02-01' }
+  { id:'CMP-001', name:'Solar Rooftop Promotion Q1', stage:'Published', channel:'Facebook Ads', budget:50000, leads:12, owner:'Marketing', createdAt:'2025-01-05', description:'โปรโมท Solar Rooftop สำหรับบ้านพักอาศัย ผ่าน FB Ads targeting กลุ่มเจ้าของบ้าน อายุ 30-55' },
+  { id:'CMP-002', name:'Trade Show 2025 March', stage:'Scheduled', channel:'Event', budget:150000, leads:0, owner:'Marketing', createdAt:'2025-01-15', description:'บูธงาน ASEAN Sustainable Energy Week 2025 — แสดง Inverter 10kW + Battery System' },
+  { id:'CMP-003', name:'Google Ads — Inverter', stage:'Draft', channel:'Google Ads', budget:30000, leads:0, owner:'Marketing', createdAt:'2025-02-01', description:'Search Ads สำหรับ keyword: solar inverter, อินเวอร์เตอร์, ระบบโซลาร์เซลล์' }
 ];
 const campaignStages = ['Draft','Technical Review','Approval','Scheduled','Published','Result Analysis'];
+let campaignComments = [
+  { id:'CCMT-001', campaignId:'CMP-001', user:'Marketing', message:'Creative ready — 3 variants for A/B test', timestamp:'2025-01-06 10:00', tags:['Manager'] },
+  { id:'CCMT-002', campaignId:'CMP-001', user:'Manager', message:'Approved. Budget OK @Marketing เริ่มได้เลย', timestamp:'2025-01-07 14:00', tags:['Marketing'] }
+];
+
+let mktViewMode = 'kanban'; // 'kanban' or 'table'
 
 content.marketing = function() {
   const totalLeads = campaigns.reduce((s,c)=>s+c.leads,0);
@@ -1274,41 +1336,74 @@ content.marketing = function() {
     </div>
     <div class="search-box">
       <input type="text" placeholder="Search campaigns..." onkeyup="filterCampaigns(this.value)">
+      <select onchange="mktViewMode=this.value;showPage('marketing')" style="padding:8px;background:var(--bg-primary,#1a1a2e);border:1px solid var(--border,#2a2a4e);border-radius:6px;color:var(--text-primary,#fff);font-size:12px">
+        <option value="kanban" ${mktViewMode==='kanban'?'selected':''}>📋 Kanban</option>
+        <option value="table" ${mktViewMode==='table'?'selected':''}>📊 Table</option>
+      </select>
       <button class="btn btn-primary" onclick="openNewCampaignModal()">+ New Campaign</button>
     </div>
-    <div class="table-container">
-      <table id="campaignsTable">
-        <tr><th>Campaign</th><th>Channel</th><th>Budget</th><th>Leads</th><th>Stage</th><th>Action</th></tr>
-        ${campaigns.map(c => `
-          <tr>
-            <td><strong>${c.name}</strong><br><span style="color:#666;font-size:11px">${c.id}</span></td>
-            <td>${c.channel}</td>
-            <td>${formatBahtFull(c.budget)}</td>
-            <td>${c.leads}</td>
-            <td><span class="status ${c.stage==='Published'?'won':c.stage==='Draft'?'new':c.stage==='Result Analysis'?'lost':'progress'}">${c.stage}</span></td>
-            <td>
-              <button class="btn btn-secondary" style="font-size:11px;padding:4px 8px" onclick="openCampaignDetail('${c.id}')">Detail</button>
-              ${campaignStages.indexOf(c.stage) < campaignStages.length - 1 ?
-                `<button class="btn btn-primary" style="font-size:11px;padding:4px 8px;margin-left:4px" onclick="advanceCampaign('${c.id}')">→ Next</button>` : ''}
-            </td>
-          </tr>
-        `).join('')}
-      </table>
-    </div>
-    <div style="margin-top:15px;padding:12px;background:#16213e;border-radius:10px">
-      <h4 style="font-size:12px;color:#888;margin-bottom:8px">Campaign Stages</h4>
-      <div style="display:flex;gap:4px;flex-wrap:wrap">
-        ${campaignStages.map((s,i) => `<span style="padding:4px 10px;background:#1a1a2e;border-radius:12px;font-size:11px;color:#888">${i+1}. ${s}</span>`).join('<span style="color:#666;font-size:11px;padding:0 2px">→</span>')}
-      </div>
-    </div>
+    ${mktViewMode === 'kanban' ? renderMktKanban() : renderMktTable()}
   `;
 };
 
+function renderMktKanban() {
+  const stageColors = { Draft:'#60a5fa', 'Technical Review':'#818cf8', Approval:'#fbbf24', Scheduled:'#c084fc', Published:'#4ade80', 'Result Analysis':'#f97316' };
+  return `<div class="kanban">
+    ${campaignStages.map(stage => {
+      const stageCmps = campaigns.filter(c => c.stage === stage);
+      return `<div class="kanban-col" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="dropCampaign(event,'${stage}');this.classList.remove('drag-over')">
+        <h4 style="border-left:3px solid ${stageColors[stage]};padding-left:8px">${stage} <span class="kanban-count">${stageCmps.length}</span></h4>
+        ${stageCmps.map(c => `
+          <div class="kanban-card" draggable="true" ondragstart="event.dataTransfer.setData('cmpId','${c.id}')" onclick="openCampaignDetail('${c.id}')">
+            <h5>${c.name}</h5>
+            <p>${c.channel} · ${formatBaht(c.budget)}</p>
+            <div style="display:flex;justify-content:space-between;margin-top:6px">
+              <span style="font-size:10px;color:#888">📈 ${c.leads} leads</span>
+              <span style="font-size:10px;color:#888">📎 ${(campaignAttachments||[]).filter(a=>a.campaignId===c.id).length}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderMktTable() {
+  return `<div class="table-container">
+    <table id="campaignsTable">
+      <tr><th>Campaign</th><th>Channel</th><th>Budget</th><th>Leads</th><th>Stage</th><th>Attachments</th><th>Action</th></tr>
+      ${campaigns.map(c => `<tr>
+        <td style="cursor:pointer" onclick="openCampaignDetail('${c.id}')"><strong>${c.name}</strong><br><span style="color:#666;font-size:11px">${c.id}</span></td>
+        <td>${c.channel}</td>
+        <td>${formatBahtFull(c.budget)}</td>
+        <td>${c.leads}</td>
+        <td><span class="status ${c.stage==='Published'?'won':c.stage==='Draft'?'new':'progress'}">${c.stage}</span></td>
+        <td>📎 ${(campaignAttachments||[]).filter(a=>a.campaignId===c.id).length}</td>
+        <td><button class="btn btn-secondary" style="font-size:11px;padding:4px 8px" onclick="openCampaignDetail('${c.id}')">Detail</button></td>
+      </tr>`).join('')}
+    </table>
+  </div>`;
+}
+
+function dropCampaign(event, newStage) {
+  event.preventDefault();
+  const cmpId = event.dataTransfer.getData('cmpId');
+  const cmp = campaigns.find(c => c.id === cmpId);
+  if (cmp) { cmp.stage = newStage; showPage('marketing'); }
+}
+
 function filterCampaigns(q) {
-  q = q.toLowerCase();
-  document.querySelectorAll('#campaignsTable tr:not(:first-child)').forEach(row => {
-    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
-  });
+  if (mktViewMode === 'table') {
+    q = q.toLowerCase();
+    document.querySelectorAll('#campaignsTable tr:not(:first-child)').forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  } else {
+    q = q.toLowerCase();
+    document.querySelectorAll('.kanban-card').forEach(card => {
+      card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
 }
 
 function openNewCampaignModal() {
@@ -1317,6 +1412,7 @@ function openNewCampaignModal() {
     <div class="form-group"><label>Campaign Name</label><input type="text" id="newCmpName" placeholder="ชื่อ Campaign"></div>
     <div class="form-group"><label>Channel</label><select id="newCmpChannel"><option>Facebook Ads</option><option>Google Ads</option><option>LINE OA</option><option>Event</option><option>Email</option><option>Referral Program</option></select></div>
     <div class="form-group"><label>Budget (฿)</label><input type="number" id="newCmpBudget" value="50000" min="0"></div>
+    <div class="form-group"><label>Description</label><textarea id="newCmpDesc" placeholder="รายละเอียด Campaign"></textarea></div>
     <button class="btn btn-primary" onclick="createNewCampaign()">Create Campaign</button>
   `, false);
 }
@@ -1331,8 +1427,9 @@ function createNewCampaign() {
     channel: document.getElementById('newCmpChannel').value,
     budget: parseInt(document.getElementById('newCmpBudget').value) || 0,
     leads: 0,
-    owner: 'Marketing Team',
-    createdAt: new Date().toISOString().slice(0,10)
+    owner: 'Marketing',
+    createdAt: new Date().toISOString().slice(0,10),
+    description: document.getElementById('newCmpDesc')?.value || ''
   });
   closeModal();
   showPage('marketing');
@@ -1342,50 +1439,128 @@ function advanceCampaign(id) {
   const cmp = campaigns.find(c => c.id === id);
   if (!cmp) return;
   const idx = campaignStages.indexOf(cmp.stage);
-  if (idx < campaignStages.length - 1) {
-    cmp.stage = campaignStages[idx + 1];
-  }
-  showPage('marketing');
+  if (idx < campaignStages.length - 1) cmp.stage = campaignStages[idx + 1];
+  openCampaignDetail(id);
 }
 
 function openCampaignDetail(id) {
   const cmp = campaigns.find(c => c.id === id);
   if (!cmp) return;
   const currentIdx = campaignStages.indexOf(cmp.stage);
-  // Related deals (by lead count)
-  const relatedDeals = deals.filter(d => d.stage === 'Lead').slice(0, cmp.leads);
+  const atts = (campaignAttachments||[]).filter(a => a.campaignId === id);
+  const cmts = campaignComments.filter(c => c.campaignId === id).sort((a,b) => b.timestamp.localeCompare(a.timestamp));
 
   openModal(`
     <div class="deal-header">
-      <h2>${cmp.name}</h2>
+      <h2>📣 ${cmp.name}</h2>
       <span class="status ${cmp.stage==='Published'?'won':cmp.stage==='Draft'?'new':'progress'}">${cmp.stage}</span>
     </div>
-    <div class="deal-meta">
+    <div class="deal-meta" style="grid-template-columns:repeat(3,1fr)">
       <div class="deal-meta-item">Channel<span>${cmp.channel}</span></div>
       <div class="deal-meta-item">Budget<span>${formatBahtFull(cmp.budget)}</span></div>
-      <div class="deal-meta-item">Leads Generated<span>${cmp.leads}</span></div>
+      <div class="deal-meta-item">Leads<span>${cmp.leads}</span></div>
       <div class="deal-meta-item">Cost/Lead<span>${cmp.leads > 0 ? formatBahtFull(Math.round(cmp.budget/cmp.leads)) : '—'}</span></div>
       <div class="deal-meta-item">Owner<span>${cmp.owner}</span></div>
       <div class="deal-meta-item">Created<span>${cmp.createdAt}</span></div>
     </div>
+    ${cmp.description ? `<div style="padding:12px;background:var(--bg-primary,#1a1a2e);border-radius:8px;font-size:13px;color:#ccc;margin-bottom:15px;line-height:1.6">${cmp.description}</div>` : ''}
+
     <div class="deal-section">
       <div class="deal-section-title">Stage Progression</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">
-        ${campaignStages.map((s,i) => `<span style="padding:6px 12px;background:${i<=currentIdx?'#166534':'#1a1a2e'};color:${i<=currentIdx?'#4ade80':'#666'};border-radius:12px;font-size:11px;font-weight:${i===currentIdx?'bold':'normal'}">${s}</span>`).join('<span style="color:#666;padding:0 2px">→</span>')}
+        ${campaignStages.map((s,i) => `<span style="padding:6px 12px;background:${i<=currentIdx?'#166534':'var(--bg-primary,#1a1a2e)'};color:${i<=currentIdx?'#4ade80':'#666'};border-radius:12px;font-size:11px;font-weight:${i===currentIdx?'bold':'normal'}">${s}</span>`).join('<span style="color:#666;padding:0 2px">→</span>')}
       </div>
       ${currentIdx < campaignStages.length - 1 ?
-        `<button class="btn btn-primary" onclick="advanceCampaign('${id}');openCampaignDetail('${id}')">→ Advance to ${campaignStages[currentIdx+1]}</button>` :
+        `<button class="btn btn-primary" style="font-size:12px" onclick="advanceCampaign('${id}')">→ Advance to ${campaignStages[currentIdx+1]}</button>` :
         '<p style="color:#4ade80;font-size:12px">✅ Campaign completed all stages</p>'}
     </div>
+
+    <div class="deal-section">
+      <div class="deal-section-title">📎 Attachments (${atts.length})</div>
+      ${atts.map(a => `
+        <div class="att-item">
+          <span class="att-icon">${a.type==='image'?'🖼️':'📄'}</span>
+          <div class="att-info"><div class="att-name">${a.name}</div><div class="att-meta">${a.size} · ${a.uploadedBy} · ${a.uploadedAt}</div></div>
+        </div>
+      `).join('')}
+      ${atts.length === 0 ? '<p style="color:#666;font-size:12px">ยังไม่มีไฟล์แนบ</p>' : ''}
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn btn-secondary" style="font-size:11px" onclick="addMockAttachment('${id}','image')">🖼️ + รูปภาพ</button>
+        <button class="btn btn-secondary" style="font-size:11px" onclick="addMockAttachment('${id}','file')">📄 + ไฟล์</button>
+      </div>
+    </div>
+
     ${cmp.stage === 'Published' || cmp.stage === 'Result Analysis' ? `
     <div class="deal-section">
-      <div class="deal-section-title">Add Leads</div>
+      <div class="deal-section-title">📈 Add Leads</div>
       <div style="display:flex;gap:8px;align-items:center">
-        <input type="number" id="addLeadsCount" value="1" min="1" style="width:60px;padding:6px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:4px;color:#fff;font-size:12px">
-        <button class="btn btn-secondary" style="font-size:11px;padding:6px 10px" onclick="addCampaignLeads('${id}')">+ Add Leads</button>
+        <input type="number" id="addLeadsCount" value="1" min="1" style="width:60px;padding:6px;background:var(--bg-primary,#1a1a2e);border:1px solid var(--border,#2a2a4e);border-radius:4px;color:var(--text-primary,#fff);font-size:12px">
+        <button class="btn btn-secondary" style="font-size:11px" onclick="addCampaignLeads('${id}')">+ Add Leads</button>
       </div>
     </div>` : ''}
+
+    <div class="deal-section">
+      <div class="deal-section-title">💬 Comments & Discussion</div>
+      <div class="chat-mini-input">
+        <select id="cmpCommentUser" class="chat-user-select">
+          ${teamMembers.map(m => `<option value="${m.name}">${m.avatar} ${m.name}</option>`).join('')}
+        </select>
+        <div class="chat-input-wrap">
+          <input type="text" id="cmpCommentInput" placeholder="พิมพ์ข้อความ... ใช้ @ชื่อ เพื่อ tag" style="flex:1;padding:8px 12px;background:var(--bg-primary,#1a1a2e);border:1px solid var(--border,#2a2a4e);border-radius:20px;color:var(--text-primary,#fff);font-size:12px"
+                 onkeydown="if(event.key==='Enter')submitCmpComment('${id}')">
+          <button class="btn btn-primary" style="font-size:11px;padding:6px 14px;border-radius:20px" onclick="submitCmpComment('${id}')">Send</button>
+        </div>
+      </div>
+      <div class="chat-quick-tags">
+        ${teamMembers.slice(0,5).map(m => `<span class="quick-tag" onclick="document.getElementById('cmpCommentInput').value+=' @${m.name} '">${m.avatar} ${m.name}</span>`).join('')}
+      </div>
+      <div class="chat-messages">
+      ${cmts.length === 0 ? '<p style="color:#666;font-size:12px;padding:10px">ยังไม่มีข้อความ</p>' :
+        cmts.map(c => {
+          const member = teamMembers.find(m => m.name === c.user);
+          const highlightedMsg = c.message.replace(/@(\S+)/g, '<span class="chat-tag-mention">@$1</span>');
+          return `<div class="chat-bubble">
+            <div class="chat-bubble-header">
+              <span class="chat-avatar">${member?.avatar||'👤'}</span>
+              <span class="chat-name">${c.user}</span>
+              <span class="chat-time">${c.timestamp}</span>
+            </div>
+            <div class="chat-bubble-body">${highlightedMsg}</div>
+            ${c.tags?.length > 0 ? `<div class="chat-bubble-tags">${c.tags.map(t => `<span class="chat-tag-chip">@${t}</span>`).join('')}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
   `, true);
+}
+
+function submitCmpComment(campaignId) {
+  const msg = document.getElementById('cmpCommentInput')?.value?.trim();
+  if (!msg) return;
+  const user = document.getElementById('cmpCommentUser')?.value || 'Marketing';
+  const tagMatches = msg.match(/@(\S+)/g) || [];
+  const tags = tagMatches.map(t => t.replace('@',''));
+  campaignComments.push({
+    id: 'CCMT-' + String(campaignComments.length + 1).padStart(3,'0'),
+    campaignId, user, message: msg, tags,
+    timestamp: new Date().toLocaleString('sv-SE').replace(',','')
+  });
+  openCampaignDetail(campaignId);
+}
+
+function addMockAttachment(campaignId, type) {
+  const names = type === 'image'
+    ? ['Banner_1080x1080.jpg','Story_IG_v2.png','Cover_FB.jpg','Photo_product.jpg']
+    : ['Brief_v3.pdf','Report_leads.xlsx','Budget_plan.pdf','Creative_deck.pptx'];
+  const sizes = type === 'image' ? ['245 KB','380 KB','520 KB','190 KB'] : ['1.2 MB','340 KB','890 KB','2.1 MB'];
+  const idx = (campaignAttachments||[]).filter(a => a.campaignId === campaignId).length % 4;
+  campaignAttachments.push({
+    id: 'ATT-' + String(campaignAttachments.length + 1).padStart(3,'0'),
+    campaignId, name: names[idx], type, size: sizes[idx],
+    uploadedBy: currentRole === 'sales' ? 'สมชาย' : 'Marketing',
+    uploadedAt: new Date().toISOString().slice(0,10)
+  });
+  openCampaignDetail(campaignId);
 }
 
 function addCampaignLeads(id) {
@@ -1406,13 +1581,15 @@ let tickets = [
 ];
 
 content.support = function() {
+  const filteredTickets = filterByDate(tickets, 'created');
   return `
     <div class="cards">
-      <div class="card"><h3>Open Tickets</h3><div class="value" style="color:#ef4444">${tickets.filter(t=>t.status==='Open').length}</div></div>
-      <div class="card"><h3>In Progress</h3><div class="value" style="color:#fbbf24">${tickets.filter(t=>t.status==='In Progress').length}</div></div>
-      <div class="card"><h3>Resolved</h3><div class="value" style="color:#4ade80">${tickets.filter(t=>t.status==='Resolved').length}</div></div>
-      <div class="card"><h3>Avg Response (sim)</h3><div class="value">${tickets.length > 0 ? '2.4h' : '—'}</div></div>
+      <div class="card"><h3>Open Tickets</h3><div class="value" style="color:#ef4444">${filteredTickets.filter(t=>t.status==='Open').length}</div></div>
+      <div class="card"><h3>In Progress</h3><div class="value" style="color:#fbbf24">${filteredTickets.filter(t=>t.status==='In Progress').length}</div></div>
+      <div class="card"><h3>Resolved</h3><div class="value" style="color:#4ade80">${filteredTickets.filter(t=>t.status==='Resolved').length}</div></div>
+      <div class="card"><h3>Avg Response (sim)</h3><div class="value">${filteredTickets.length > 0 ? '2.4h' : '—'}</div></div>
     </div>
+    ${renderDateFilter('support')}
     <div class="search-box">
       <input type="text" placeholder="Search tickets..." onkeyup="filterTickets(this.value)">
       <button class="btn btn-primary" onclick="openNewTicketModal()">+ New Ticket</button>
@@ -1420,7 +1597,7 @@ content.support = function() {
     <div class="table-container">
       <table id="ticketsTable">
         <tr><th>Ticket</th><th>Subject</th><th>Product</th><th>Deal</th><th>Priority</th><th>Status</th><th>Action</th></tr>
-        ${tickets.map(t => {
+        ${filteredTickets.map(t => {
           const deal = deals.find(d => d.id === t.dealId);
           const prod = getProduct(t.product);
           return `<tr>
@@ -1813,6 +1990,410 @@ content.peak = function() {
     <div style="margin-top:15px;padding:15px;background:#16213e;border-radius:10px">
       <h4 style="font-size:12px;color:#888;margin-bottom:8px">ℹ️ PEAK Integration Rules</h4>
       <p style="font-size:12px;color:#666">This system does NOT perform accounting. It sends finalized records to PEAK and tracks sync status only. No ledger logic, no tax calculation.</p>
+    </div>
+  `;
+};
+
+// ────────────────────────────
+// 16) DATE FILTER UTILITY
+// ────────────────────────────
+let dateFilterFrom = '';
+let dateFilterTo = '';
+
+function renderDateFilter(module) {
+  return `<div class="date-filter-row">
+    <label style="font-size:11px;color:var(--text-muted,#888)">จาก:</label>
+    <input type="date" id="dateFrom_${module}" value="${dateFilterFrom}" onchange="dateFilterFrom=this.value;showPage('${module}')" style="padding:6px;background:var(--bg-primary,#1a1a2e);border:1px solid var(--border,#2a2a4e);border-radius:4px;color:var(--text-primary,#fff);font-size:12px">
+    <label style="font-size:11px;color:var(--text-muted,#888)">ถึง:</label>
+    <input type="date" id="dateTo_${module}" value="${dateFilterTo}" onchange="dateFilterTo=this.value;showPage('${module}')" style="padding:6px;background:var(--bg-primary,#1a1a2e);border:1px solid var(--border,#2a2a4e);border-radius:4px;color:var(--text-primary,#fff);font-size:12px">
+    <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="dateFilterFrom='';dateFilterTo='';showPage('${module}')">Reset</button>
+    <select onchange="applyQuickDateFilter(this.value,'${module}')" style="padding:6px;background:var(--bg-primary,#1a1a2e);border:1px solid var(--border,#2a2a4e);border-radius:4px;color:var(--text-primary,#fff);font-size:12px">
+      <option value="">— Quick —</option>
+      <option value="7d">7 วัน</option>
+      <option value="30d">30 วัน</option>
+      <option value="90d">90 วัน</option>
+      <option value="thisMonth">เดือนนี้</option>
+      <option value="lastMonth">เดือนที่แล้ว</option>
+      <option value="thisQ">ไตรมาสนี้</option>
+    </select>
+  </div>`;
+}
+
+function applyQuickDateFilter(preset, module) {
+  const now = new Date();
+  let from = new Date();
+  if (preset === '7d') from.setDate(now.getDate() - 7);
+  else if (preset === '30d') from.setDate(now.getDate() - 30);
+  else if (preset === '90d') from.setDate(now.getDate() - 90);
+  else if (preset === 'thisMonth') from = new Date(now.getFullYear(), now.getMonth(), 1);
+  else if (preset === 'lastMonth') { from = new Date(now.getFullYear(), now.getMonth()-1, 1); now.setDate(0); }
+  else if (preset === 'thisQ') { const q = Math.floor(now.getMonth()/3)*3; from = new Date(now.getFullYear(), q, 1); }
+  else { dateFilterFrom=''; dateFilterTo=''; showPage(module); return; }
+  dateFilterFrom = from.toISOString().slice(0,10);
+  dateFilterTo = (preset === 'lastMonth' ? now : new Date()).toISOString().slice(0,10);
+  showPage(module);
+}
+
+function filterByDate(items, dateField) {
+  if (!dateFilterFrom && !dateFilterTo) return items;
+  return items.filter(item => {
+    const d = item[dateField];
+    if (!d) return true;
+    if (dateFilterFrom && d < dateFilterFrom) return false;
+    if (dateFilterTo && d > dateFilterTo) return false;
+    return true;
+  });
+}
+
+// ────────────────────────────
+// 17) TASKS — Assignment System
+// ────────────────────────────
+const taskStatuses = ['Open','In Progress','Done'];
+
+content.tasks = function() {
+  const filteredTasks = filterByDate(tasks, 'dueDate');
+  const open = filteredTasks.filter(t=>t.status==='Open').length;
+  const inProg = filteredTasks.filter(t=>t.status==='In Progress').length;
+  const done = filteredTasks.filter(t=>t.status==='Done').length;
+  const overdue = filteredTasks.filter(t=>t.status!=='Done' && t.dueDate < new Date().toISOString().slice(0,10)).length;
+
+  return `
+    <div class="cards">
+      <div class="card"><h3>Open</h3><div class="value">${open}</div></div>
+      <div class="card"><h3>In Progress</h3><div class="value" style="color:#fbbf24">${inProg}</div></div>
+      <div class="card"><h3>Done</h3><div class="value" style="color:#4ade80">${done}</div></div>
+      <div class="card"><h3>Overdue</h3><div class="value" style="color:#ef4444">${overdue}</div></div>
+    </div>
+    ${renderDateFilter('tasks')}
+    <div class="search-box" style="margin-top:12px">
+      <input type="text" placeholder="Search tasks..." onkeyup="filterTasksUI(this.value)">
+      <select id="taskFilterOwner" onchange="showPage('tasks')" style="padding:8px;background:var(--bg-primary,#1a1a2e);border:1px solid var(--border,#2a2a4e);border-radius:6px;color:var(--text-primary,#fff);font-size:12px">
+        <option value="">ทุกคน</option>
+        ${teamMembers.map(m => `<option value="${m.name}">${m.name}</option>`).join('')}
+      </select>
+      ${hasPermission('canApprove') ? `<button class="btn btn-primary" onclick="openNewTaskModal()">+ มอบหมายงาน</button>` : ''}
+    </div>
+    <div class="kanban" style="margin-top:15px">
+      ${taskStatuses.map(status => {
+        const statusTasks = filteredTasks.filter(t => t.status === status);
+        const color = status==='Open'?'#60a5fa':status==='In Progress'?'#fbbf24':'#4ade80';
+        return `<div class="kanban-col">
+          <h4 style="border-left:3px solid ${color};padding-left:8px">${status} <span class="kanban-count">${statusTasks.length}</span></h4>
+          ${statusTasks.map(t => {
+            const isOverdue = t.status!=='Done' && t.dueDate < new Date().toISOString().slice(0,10);
+            return `<div class="kanban-card" onclick="openTaskDetail('${t.id}')" style="${isOverdue?'border-left:3px solid #ef4444':''}">
+              <h5>${t.title}</h5>
+              <p>👤 ${t.assignedTo} · 📅 ${t.dueDate}</p>
+              <div style="display:flex;justify-content:space-between;margin-top:6px">
+                <span class="status ${t.priority==='High'?'lost':t.priority==='Medium'?'progress':'new'}" style="font-size:10px">${t.priority}</span>
+                ${t.dealId ? `<span style="font-size:10px;color:#4ade80;cursor:pointer" onclick="event.stopPropagation();openDealDetail('${t.dealId}')">💰 ${t.dealId}</span>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+};
+
+function filterTasksUI(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.kanban-card').forEach(card => {
+    card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function openNewTaskModal() {
+  openModal(`
+    <h3 style="margin-bottom:15px">📋 มอบหมายงานใหม่</h3>
+    <div class="form-group"><label>หัวข้องาน</label><input type="text" id="newTaskTitle" placeholder="ระบุสิ่งที่ต้องทำ"></div>
+    <div class="form-group"><label>รายละเอียด</label><textarea id="newTaskDesc" placeholder="อธิบายรายละเอียดเพิ่มเติม"></textarea></div>
+    <div class="form-group"><label>มอบหมายให้</label><select id="newTaskAssign">${teamMembers.map(m => `<option value="${m.name}">${m.avatar} ${m.name} (${m.role})</option>`).join('')}</select></div>
+    <div class="form-group"><label>เกี่ยวข้องกับ Deal</label><select id="newTaskDeal"><option value="">— ไม่ระบุ —</option>${deals.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Deadline</label><input type="date" id="newTaskDue" value="${new Date(Date.now()+7*86400000).toISOString().slice(0,10)}"></div>
+    <div class="form-group"><label>Priority</label><select id="newTaskPri"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+    <button class="btn btn-primary" onclick="createNewTask()">สร้างงาน</button>
+  `, false);
+}
+
+function createNewTask() {
+  const title = document.getElementById('newTaskTitle').value.trim();
+  if (!title) { alert('กรุณากรอกหัวข้องาน'); return; }
+  tasks.push({
+    id: 'TSK-' + String(tasks.length + 1).padStart(3,'0'),
+    title,
+    description: document.getElementById('newTaskDesc')?.value || '',
+    assignedTo: document.getElementById('newTaskAssign').value,
+    assignedBy: rolePermissions[currentRole].label,
+    dealId: document.getElementById('newTaskDeal').value || null,
+    dueDate: document.getElementById('newTaskDue').value,
+    status: 'Open',
+    priority: document.getElementById('newTaskPri').value,
+    createdAt: new Date().toISOString().slice(0,10)
+  });
+  closeModal();
+  showPage('tasks');
+}
+
+function openTaskDetail(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  const deal = t.dealId ? deals.find(d => d.id === t.dealId) : null;
+  const isOverdue = t.status !== 'Done' && t.dueDate < new Date().toISOString().slice(0,10);
+
+  openModal(`
+    <div class="deal-header">
+      <h2>📋 ${t.title}</h2>
+      <span class="status ${t.status==='Done'?'won':t.status==='Open'?'new':'progress'}">${t.status}</span>
+    </div>
+    ${isOverdue ? '<div class="deal-locked-banner" style="background:#7f1d1d;color:#ef4444">⚠️ เกินกำหนด!</div>' : ''}
+    <div class="deal-meta">
+      <div class="deal-meta-item">มอบหมายให้<span>👤 ${t.assignedTo}</span></div>
+      <div class="deal-meta-item">มอบหมายโดย<span>${t.assignedBy}</span></div>
+      <div class="deal-meta-item">Deadline<span>📅 ${t.dueDate}</span></div>
+      <div class="deal-meta-item">Priority<span>${t.priority}</span></div>
+      <div class="deal-meta-item">Created<span>${t.createdAt}</span></div>
+      <div class="deal-meta-item">Deal<span>${deal ? `<a style="color:#4ade80;cursor:pointer" onclick="closeModal();openDealDetail('${t.dealId}')">${deal.name}</a>` : '—'}</span></div>
+    </div>
+    ${t.description ? `<div style="padding:12px;background:var(--bg-primary,#1a1a2e);border-radius:8px;font-size:13px;color:#ccc;line-height:1.6;margin-bottom:15px">${t.description}</div>` : ''}
+    <div class="stage-actions">
+      ${t.status === 'Open' ? `<button class="stage-btn next" onclick="changeTaskStatus('${id}','In Progress')">▶ เริ่มทำ</button>` : ''}
+      ${t.status === 'In Progress' ? `<button class="stage-btn win" onclick="changeTaskStatus('${id}','Done')">✅ เสร็จแล้ว</button>` : ''}
+      ${t.status === 'Done' ? '<span style="color:#4ade80;font-size:13px">✅ งานเสร็จสมบูรณ์</span>' : ''}
+      ${t.status !== 'Done' && hasPermission('canApprove') ? `<button class="stage-btn lose" onclick="changeTaskStatus('${id}','Open')">↩ Reset</button>` : ''}
+    </div>
+  `, true);
+}
+
+function changeTaskStatus(id, newStatus) {
+  const t = tasks.find(x => x.id === id);
+  if (t) {
+    t.status = newStatus;
+    if (t.dealId) logActivity(t.dealId, 'system', `📋 Task "${t.title}" → ${newStatus}`, t.assignedTo);
+  }
+  openTaskDetail(id);
+}
+
+// ────────────────────────────
+// 18) TARGETS — Org / Team / Individual
+// ────────────────────────────
+
+content.targets = function() {
+  const typeLabels = { org:'🏢 องค์กร', team:'👥 ทีม', individual:'👤 บุคคล' };
+  return `
+    <div class="search-box">
+      <select id="targetTypeFilter" onchange="showPage('targets')" style="padding:8px;background:var(--bg-primary,#1a1a2e);border:1px solid var(--border,#2a2a4e);border-radius:6px;color:var(--text-primary,#fff);font-size:12px">
+        <option value="">ทุกระดับ</option>
+        <option value="org">🏢 องค์กร</option>
+        <option value="team">👥 ทีม</option>
+        <option value="individual">👤 บุคคล</option>
+      </select>
+      ${hasPermission('canApprove') ? '<button class="btn btn-primary" onclick="openNewTargetModal()">+ ตั้งเป้า</button>' : ''}
+    </div>
+    ${['org','team','individual'].map(type => {
+      const typeTargets = targets.filter(t => t.type === type);
+      if (typeTargets.length === 0) return '';
+      return `
+        <div class="chart-box" style="margin-top:15px">
+          <h4>${typeLabels[type]} Targets</h4>
+          ${typeTargets.map(t => {
+            const actual = computeTargetActual(t);
+            const pct = t.targetValue > 0 ? Math.min((actual / t.targetValue) * 100, 150) : 0;
+            const pctDisplay = t.targetValue > 0 ? (actual / t.targetValue * 100).toFixed(1) : '0';
+            const barColor = pct >= 100 ? '#4ade80' : pct >= 60 ? '#fbbf24' : '#ef4444';
+            return `<div style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:13px;font-weight:bold">${t.name}</span>
+                <span style="font-size:12px;color:${barColor}">${pctDisplay}%</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:11px;color:var(--text-muted,#888)">${t.owner} · ${t.period}</span>
+                <span style="font-size:11px;color:var(--text-dim,#666)">${formatTargetValue(actual, t.metric)} / ${formatTargetValue(t.targetValue, t.metric)}</span>
+              </div>
+              <div class="bar-track" style="height:16px"><div class="bar-fill" style="width:${Math.min(pct,100)}%;background:${barColor}"></div></div>
+            </div>`;
+          }).join('')}
+        </div>`;
+    }).join('')}
+  `;
+};
+
+function computeTargetActual(target) {
+  if (target.metric === 'revenue') {
+    const wonDeals = deals.filter(d => d.stage === 'Won');
+    if (target.type === 'org') return wonDeals.reduce((s,d) => s + computeDeal(d).totalSell, 0);
+    if (target.type === 'team') {
+      const teamMems = teamMembers.filter(m => m.team === target.owner).map(m => m.name);
+      return wonDeals.filter(d => teamMems.includes(d.owner)).reduce((s,d) => s + computeDeal(d).totalSell, 0);
+    }
+    return wonDeals.filter(d => d.owner === target.owner).reduce((s,d) => s + computeDeal(d).totalSell, 0);
+  }
+  if (target.metric === 'winRate') {
+    const total = deals.filter(d => ['Won','Lost'].includes(d.stage)).length;
+    return total > 0 ? (deals.filter(d => d.stage === 'Won').length / total * 100) : 0;
+  }
+  if (target.metric === 'dealsWon') {
+    return deals.filter(d => d.stage === 'Won' && d.owner === target.owner).length;
+  }
+  return 0;
+}
+
+function formatTargetValue(val, metric) {
+  if (metric === 'revenue') return formatBaht(val);
+  if (metric === 'winRate') return val.toFixed(1) + '%';
+  return String(Math.round(val));
+}
+
+function openNewTargetModal() {
+  openModal(`
+    <h3 style="margin-bottom:15px">🎯 ตั้งเป้าหมายใหม่</h3>
+    <div class="form-group"><label>ชื่อเป้าหมาย</label><input type="text" id="newTgtName" placeholder="เช่น Revenue Target Q2"></div>
+    <div class="form-group"><label>ระดับ</label><select id="newTgtType"><option value="org">🏢 องค์กร</option><option value="team">👥 ทีม</option><option value="individual">👤 บุคคล</option></select></div>
+    <div class="form-group"><label>ตัวชี้วัด</label><select id="newTgtMetric"><option value="revenue">Revenue (฿)</option><option value="dealsWon">Deals Won (#)</option><option value="winRate">Win Rate (%)</option></select></div>
+    <div class="form-group"><label>เป้าหมาย</label><input type="number" id="newTgtValue" value="5000000" min="0"></div>
+    <div class="form-group"><label>ช่วงเวลา</label><input type="text" id="newTgtPeriod" value="2025-Q1" placeholder="เช่น 2025-Q1"></div>
+    <div class="form-group"><label>เจ้าของเป้า</label><select id="newTgtOwner">
+      <option value="Organization">Organization</option>
+      <option value="Sales A">Sales A</option><option value="Sales B">Sales B</option>
+      ${teamMembers.map(m => `<option value="${m.name}">${m.name}</option>`).join('')}
+    </select></div>
+    <button class="btn btn-primary" onclick="createNewTarget()">ตั้งเป้า</button>
+  `, false);
+}
+
+function createNewTarget() {
+  const name = document.getElementById('newTgtName').value.trim();
+  if (!name) { alert('กรุณากรอกชื่อเป้าหมาย'); return; }
+  targets.push({
+    id: 'TGT-' + String(targets.length + 1).padStart(3,'0'),
+    type: document.getElementById('newTgtType').value,
+    name,
+    metric: document.getElementById('newTgtMetric').value,
+    targetValue: parseFloat(document.getElementById('newTgtValue').value) || 0,
+    period: document.getElementById('newTgtPeriod').value,
+    owner: document.getElementById('newTgtOwner').value
+  });
+  closeModal();
+  showPage('targets');
+}
+
+// ────────────────────────────
+// 19) PERFORMANCE — Multi-Dimension Analytics
+// ────────────────────────────
+
+content.performance = function() {
+  const filtered = filterByDate(deals, 'createdAt');
+  const wonFiltered = filtered.filter(d => d.stage === 'Won');
+  const lostFiltered = filtered.filter(d => d.stage === 'Lost');
+
+  // By Owner
+  const owners = [...new Set(deals.map(d => d.owner))];
+  const ownerPerf = owners.map(o => {
+    const own = filtered.filter(d => d.owner === o);
+    const won = own.filter(d => d.stage === 'Won');
+    const lost = own.filter(d => d.stage === 'Lost');
+    const revenue = won.reduce((s,d) => s + computeDeal(d).totalSell, 0);
+    const avgGP = own.length > 0 ? own.reduce((s,d) => s + computeDeal(d).gpPercent, 0) / own.length : 0;
+    const winRate = (won.length + lost.length) > 0 ? (won.length / (won.length + lost.length) * 100) : 0;
+    const tasksDone = tasks.filter(t => t.assignedTo === o && t.status === 'Done').length;
+    const tasksTotal = tasks.filter(t => t.assignedTo === o).length;
+    return { owner:o, deals:own.length, won:won.length, lost:lost.length, revenue, avgGP, winRate, tasksDone, tasksTotal };
+  });
+
+  // By Product
+  const productPerf = products.map(p => {
+    let totalQty = 0, totalRev = 0;
+    filtered.forEach(d => {
+      d.items.filter(i => i.sku === p.sku).forEach(i => { totalQty += i.qty; totalRev += i.qty * i.sellPrice; });
+    });
+    return { product:p.name, sku:p.sku, qty:totalQty, revenue:totalRev };
+  }).filter(p => p.qty > 0).sort((a,b) => b.revenue - a.revenue);
+
+  // By Channel
+  const channelMap = {};
+  filtered.forEach(d => {
+    const cust = getCustomer(d.customerId);
+    const ch = cust?.channel || 'Unknown';
+    if (!channelMap[ch]) channelMap[ch] = { deals:0, won:0, revenue:0 };
+    channelMap[ch].deals++;
+    if (d.stage === 'Won') { channelMap[ch].won++; channelMap[ch].revenue += computeDeal(d).totalSell; }
+  });
+  const channelPerf = Object.entries(channelMap).map(([ch,data]) => ({ channel:ch, ...data, winRate: data.deals > 0 ? (data.won/data.deals*100) : 0 }));
+
+  // By Stage Time (avg days in each stage)
+  const totalRevenue = wonFiltered.reduce((s,d) => s + computeDeal(d).totalSell, 0);
+  const totalDeals = filtered.length;
+  const avgDealSize = wonFiltered.length > 0 ? totalRevenue / wonFiltered.length : 0;
+
+  return `
+    <div class="cards">
+      <div class="card"><h3>Total Revenue</h3><div class="value">${formatBaht(totalRevenue)}</div><div class="sub">${wonFiltered.length} deals won</div></div>
+      <div class="card"><h3>Avg Deal Size</h3><div class="value">${formatBaht(avgDealSize)}</div></div>
+      <div class="card"><h3>Total Deals</h3><div class="value">${totalDeals}</div></div>
+      <div class="card"><h3>Win Rate</h3><div class="value">${(wonFiltered.length+lostFiltered.length)>0 ? (wonFiltered.length/(wonFiltered.length+lostFiltered.length)*100).toFixed(1) : '0'}%</div></div>
+    </div>
+    ${renderDateFilter('performance')}
+    <div class="chart-grid" style="margin-top:15px">
+      <div class="chart-box">
+        <h4>👤 Performance by Person</h4>
+        <table style="width:100%;font-size:12px">
+          <tr><th>Owner</th><th>Deals</th><th>Won</th><th>Win%</th><th>Revenue</th><th>Avg GP%</th><th>Tasks</th></tr>
+          ${ownerPerf.map(o => `<tr>
+            <td><strong>${o.owner}</strong></td>
+            <td>${o.deals}</td>
+            <td style="color:#4ade80">${o.won}</td>
+            <td>${o.winRate.toFixed(1)}%</td>
+            <td>${formatBaht(o.revenue)}</td>
+            <td><span class="gp-badge ${gpClass(o.avgGP)}">${o.avgGP.toFixed(1)}%</span></td>
+            <td>${o.tasksDone}/${o.tasksTotal}</td>
+          </tr>`).join('')}
+        </table>
+      </div>
+
+      <div class="chart-box">
+        <h4>📦 Performance by Product</h4>
+        ${productPerf.length === 0 ? '<p style="color:#666;font-size:12px">ไม่มีข้อมูลในช่วงเวลานี้</p>' :
+          productPerf.map(p => {
+            const maxRev = Math.max(...productPerf.map(x => x.revenue), 1);
+            return `<div class="pipeline-bar">
+              <div class="bar-label" style="width:130px">${p.product}</div>
+              <div class="bar-track"><div class="bar-fill" style="width:${Math.max(p.revenue/maxRev*100,3)}%;background:#818cf8"></div></div>
+              <div class="bar-value">${formatBaht(p.revenue)} (${p.qty} ${products.find(x=>x.sku===p.sku)?.unit||'pcs'})</div>
+            </div>`;
+          }).join('')}
+      </div>
+
+      <div class="chart-box">
+        <h4>📡 Performance by Channel</h4>
+        <table style="width:100%;font-size:12px">
+          <tr><th>Channel</th><th>Deals</th><th>Won</th><th>Win%</th><th>Revenue</th></tr>
+          ${channelPerf.map(c => `<tr>
+            <td><strong>${c.channel}</strong></td>
+            <td>${c.deals}</td>
+            <td style="color:#4ade80">${c.won}</td>
+            <td>${c.winRate.toFixed(1)}%</td>
+            <td>${formatBaht(c.revenue)}</td>
+          </tr>`).join('')}
+          ${channelPerf.length === 0 ? '<tr><td colspan="5" style="color:#666">ไม่มีข้อมูล</td></tr>' : ''}
+        </table>
+      </div>
+
+      <div class="chart-box">
+        <h4>🎯 Target Achievement</h4>
+        ${targets.slice(0,6).map(t => {
+          const actual = computeTargetActual(t);
+          const pct = t.targetValue > 0 ? Math.min(actual/t.targetValue*100, 150) : 0;
+          const barColor = pct >= 100 ? '#4ade80' : pct >= 60 ? '#fbbf24' : '#ef4444';
+          return `<div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+              <span>${t.name}</span>
+              <span style="color:${barColor}">${(actual/t.targetValue*100).toFixed(1)}%</span>
+            </div>
+            <div class="bar-track" style="height:12px"><div class="bar-fill" style="width:${Math.min(pct,100)}%;background:${barColor}"></div></div>
+          </div>`;
+        }).join('')}
+        <p style="font-size:11px;color:var(--text-dim,#666);margin-top:8px;cursor:pointer" onclick="showPage('targets')">ดูเป้าหมายทั้งหมด →</p>
+      </div>
     </div>
   `;
 };

@@ -228,6 +228,41 @@ th { color:var(--text-muted); font-weight:normal; }
 .cal-day.empty { background:transparent; }
 .cal-event { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
+/* ========================================
+   CHAT MINI SYSTEM
+   ======================================== */
+.chat-mini-input { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.chat-user-select { padding:6px 8px; background:var(--bg-primary,#1a1a2e); border:1px solid var(--border,#2a2a4e); border-radius:20px; color:var(--text-primary,#fff); font-size:12px; min-width:100px; }
+.chat-input-wrap { display:flex; gap:6px; flex:1; align-items:center; }
+.chat-quick-tags { display:flex; gap:4px; flex-wrap:wrap; margin:8px 0; }
+.quick-tag { padding:3px 10px; background:var(--bg-primary,#1a1a2e); border:1px solid var(--border,#2a2a4e); border-radius:20px; font-size:10px; color:var(--text-secondary,#aaa); cursor:pointer; transition:all 0.15s; }
+.quick-tag:hover { border-color:var(--accent,#4ade80); color:var(--accent,#4ade80); }
+.chat-messages { max-height:300px; overflow-y:auto; margin-top:8px; }
+.chat-bubble { padding:10px 14px; background:var(--bg-primary,#1a1a2e); border-radius:12px; margin-bottom:8px; border-left:3px solid var(--accent,#4ade80); }
+.chat-bubble-header { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+.chat-avatar { font-size:16px; }
+.chat-name { font-size:11px; font-weight:bold; color:var(--accent,#4ade80); }
+.chat-time { font-size:10px; color:var(--text-dim,#666); margin-left:auto; }
+.chat-bubble-body { font-size:13px; color:var(--text-primary,#ddd); line-height:1.5; }
+.chat-bubble-tags { display:flex; gap:4px; margin-top:6px; flex-wrap:wrap; }
+.chat-tag-chip { padding:2px 8px; background:#166534; color:#4ade80; border-radius:10px; font-size:10px; }
+.chat-tag-mention { color:#4ade80; font-weight:bold; }
+
+/* ========================================
+   ATTACHMENTS
+   ======================================== */
+.att-item { display:flex; align-items:center; gap:10px; padding:10px; background:var(--bg-primary,#1a1a2e); border-radius:8px; margin-bottom:6px; }
+.att-icon { font-size:24px; flex-shrink:0; }
+.att-info { flex:1; min-width:0; }
+.att-name { font-size:13px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.att-meta { font-size:11px; color:var(--text-dim,#666); }
+
+/* ========================================
+   DATE FILTER
+   ======================================== */
+.date-filter-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 15px; background:var(--card-bg,#16213e); border-radius:8px; margin-bottom:12px; }
+.date-filter-row input[type="date"] { padding:6px 8px; background:var(--bg-primary,#1a1a2e); border:1px solid var(--border,#2a2a4e); border-radius:6px; color:var(--text-primary,#fff); font-size:12px; }
+
 /* --- Notification panel enhanced --- */
 .notif-panel h3 { color:var(--accent); font-size:14px; margin-bottom:10px; }
 .notif-item:hover { background:var(--bg-primary); border-radius:4px; }
