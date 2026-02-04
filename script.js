@@ -132,6 +132,14 @@ let peakSyncs = [
   { id:'PEAK-001', dealId:'DEAL-004', docType:'Invoice', amount:2082000, status:'Synced', peakRef:'INV-2025-0042', syncedAt:'2025-01-29 09:00' }
 ];
 
+// Deal Comments (collaboration layer)
+let dealComments = [
+  { id:'CMT-001', dealId:'DEAL-001', user:'วิชัย', message:'ลูกค้าขอ discount เพิ่ม 3% สำหรับ panel', timestamp:'2025-01-26 10:30' },
+  { id:'CMT-002', dealId:'DEAL-001', user:'สมชาย', message:'รอยืนยันจาก supplier ก่อนลดราคาได้', timestamp:'2025-01-26 14:00' },
+  { id:'CMT-003', dealId:'DEAL-004', user:'วิชัย', message:'ลูกค้า confirm PO แล้ว รอจัดส่ง', timestamp:'2025-01-28 09:00' },
+  { id:'CMT-004', dealId:'DEAL-002', user:'สมชาย', message:'เสนอ Battery เพิ่มแต่ลูกค้ายังไม่ตัดสินใจ', timestamp:'2025-01-22 11:15' }
+];
+
 // HR data (preserved from original)
 let leaveRequests = [
   { id:'LV-001', employee:'สมชาย วงศ์ดี', type:'ลาพักร้อน', startDate:'2025-02-10', endDate:'2025-02-12', days:3, status:'Approved', reason:'พักผ่อนกับครอบครัว' },
@@ -343,6 +351,78 @@ function updateDealItems(dealId, items) {
   deal.items = items;
 }
 
+function addComment(dealId, message, user) {
+  user = user || 'สมชาย';
+  const cmt = {
+    id: nextId('CMT', dealComments),
+    dealId, user, message,
+    timestamp: new Date().toLocaleString('sv-SE').replace(',','')
+  };
+  dealComments.push(cmt);
+  logActivity(dealId, 'comment', `💬 ${user}: ${message}`, user);
+  return cmt;
+}
+
+// Dynamic notifications from real data
+function getNotifications() {
+  const notifs = [];
+  // Pending GP approvals
+  deals.filter(d => d.gpApproval && d.gpApproval.status === 'Pending').forEach(d => {
+    notifs.push({ icon:'🚨', text:`GP Approval pending — ${d.name}`, dealId:d.id, priority:1 });
+  });
+  // Pending leave approvals
+  approvalItems.filter(a => a.status === 'Pending' && a.type === 'Leave').forEach(a => {
+    notifs.push({ icon:'📝', text:`Leave pending — ${a.title}`, priority:2 });
+  });
+  // Low stock warnings
+  const committed = {};
+  deals.filter(d => d.stage !== 'Lost').forEach(d => {
+    d.items.forEach(i => { committed[i.sku] = (committed[i.sku]||0) + i.qty; });
+  });
+  products.forEach(p => {
+    const avail = p.stock - (committed[p.sku]||0);
+    if (avail < 20) notifs.push({ icon:'⚠️', text:`Low stock: ${p.name} (${avail} available)`, priority:3 });
+  });
+  // Recent won deals (last 7 days)
+  deals.filter(d => d.stage === 'Won' && d.wonAt).forEach(d => {
+    notifs.push({ icon:'🎉', text:`Deal Won — ${d.name}`, dealId:d.id, priority:4 });
+  });
+  // Pending POs
+  purchaseOrders.filter(po => po.status === 'Pending').forEach(po => {
+    notifs.push({ icon:'📦', text:`PO ${po.id} pending confirmation`, dealId:po.dealId, priority:2 });
+  });
+  // Failed PEAK syncs
+  peakSyncs.filter(ps => ps.status === 'Failed').forEach(ps => {
+    notifs.push({ icon:'⚡', text:`PEAK sync failed — retry needed`, dealId:ps.dealId, priority:1 });
+  });
+  // Open support tickets
+  tickets.filter(t => t.status === 'Open').forEach(t => {
+    notifs.push({ icon:'🎧', text:`Open ticket: ${t.subject}`, dealId:t.dealId, priority:2 });
+  });
+  return notifs.sort((a,b) => a.priority - b.priority);
+}
+
+function updateNotifBadge() {
+  const notifs = getNotifications();
+  const badge = document.querySelector('.notif-badge');
+  if (badge) badge.textContent = '🔔 ' + notifs.length;
+}
+
+function renderNotifPanel() {
+  const notifs = getNotifications();
+  const panel = document.getElementById('notifPanel');
+  if (!panel) return;
+  panel.innerHTML = `
+    <h3>Notifications (${notifs.length})</h3>
+    ${notifs.length === 0 ? '<p style="color:#666;font-size:12px;padding:10px">No notifications</p>' :
+      notifs.map(n => `
+        <div class="notif-item" ${n.dealId ? `style="cursor:pointer" onclick="openDealDetail('${n.dealId}');document.getElementById('notifPanel').classList.add('hidden')"` : ''}>
+          ${n.icon} ${n.text}
+        </div>
+      `).join('')}
+  `;
+}
+
 // ────────────────────────────
 //  4) NAVIGATION (PRESERVED)
 // ────────────────────────────
@@ -360,11 +440,15 @@ function showPage(page) {
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(n => { if (n.textContent.toLowerCase().includes(page === 'hr' ? 'hr portal' : titles[page]?.toLowerCase())) n.classList.add('active'); });
   document.getElementById('mainContent').innerHTML = content[page] ? content[page]() : '<p>Module coming soon</p>';
-  // Close notif panel
+  // Close notif panel + refresh badge
   document.getElementById('notifPanel').classList.add('hidden');
+  updateNotifBadge();
 }
 
-function toggleNotif() { document.getElementById('notifPanel').classList.toggle('hidden'); }
+function toggleNotif() {
+  renderNotifPanel();
+  document.getElementById('notifPanel').classList.toggle('hidden');
+}
 function openModal(html, wide) {
   document.getElementById('modalBody').innerHTML = html;
   const mc = document.querySelector('.modal-content');
@@ -700,6 +784,29 @@ function openDealDetail(dealId) {
       </table></div>` : ''}
 
     <div class="deal-section">
+      <div class="deal-section-title">Comments & Notes</div>
+      ${!isLocked ? `
+        <div class="comment-input-row">
+          <select id="commentUser" style="width:100px;padding:6px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:4px;color:#fff;font-size:12px">
+            <option>สมชาย</option><option>วิชัย</option><option>Manager</option>
+          </select>
+          <input type="text" id="commentInput" placeholder="เพิ่ม comment..." style="flex:1;padding:6px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:4px;color:#fff;font-size:12px"
+                 onkeydown="if(event.key==='Enter')submitComment('${dealId}')">
+          <button class="btn btn-primary" style="font-size:11px;padding:6px 12px" onclick="submitComment('${dealId}')">Send</button>
+        </div>
+      ` : ''}
+      ${dealComments.filter(c => c.dealId === dealId).sort((a,b) => b.timestamp.localeCompare(a.timestamp)).length === 0
+        ? '<p style="color:#666;font-size:12px;margin-top:8px">No comments yet</p>'
+        : dealComments.filter(c => c.dealId === dealId).sort((a,b) => b.timestamp.localeCompare(a.timestamp)).map(c => `
+          <div class="comment-item">
+            <div class="comment-user">${c.user}</div>
+            <div class="comment-msg">${c.message}</div>
+            <div class="comment-time">${c.timestamp}</div>
+          </div>
+        `).join('')}
+    </div>
+
+    <div class="deal-section">
       <div class="deal-section-title">Activity Timeline</div>
       ${dealActs.length ? dealActs.map(a => `
         <div class="timeline-item">
@@ -738,6 +845,13 @@ function submitGPApproval(dealId) {
   const reason = document.getElementById('gpApprovalReason')?.value?.trim();
   if (!reason) { alert('กรุณาระบุเหตุผล'); return; }
   requestGPApproval(dealId, reason);
+  openDealDetail(dealId);
+}
+function submitComment(dealId) {
+  const msg = document.getElementById('commentInput')?.value?.trim();
+  if (!msg) return;
+  const user = document.getElementById('commentUser')?.value || 'สมชาย';
+  addComment(dealId, msg, user);
   openDealDetail(dealId);
 }
 function doStageChange(dealId, stage) {
@@ -1067,43 +1181,154 @@ content.purchasing = function() {
 // 13) MARKETING (STAGES)
 // ────────────────────────────
 
-const campaigns = [
-  { id:'CMP-001', name:'Solar Rooftop Promotion Q1', stage:'Published', channel:'Facebook Ads', budget:50000, leads:12, owner:'Marketing Team' },
-  { id:'CMP-002', name:'Trade Show 2025 March', stage:'Scheduled', channel:'Event', budget:150000, leads:0, owner:'Marketing Team' },
-  { id:'CMP-003', name:'Google Ads — Inverter', stage:'Draft', channel:'Google Ads', budget:30000, leads:0, owner:'Marketing Team' }
+let campaigns = [
+  { id:'CMP-001', name:'Solar Rooftop Promotion Q1', stage:'Published', channel:'Facebook Ads', budget:50000, leads:12, owner:'Marketing Team', createdAt:'2025-01-05' },
+  { id:'CMP-002', name:'Trade Show 2025 March', stage:'Scheduled', channel:'Event', budget:150000, leads:0, owner:'Marketing Team', createdAt:'2025-01-15' },
+  { id:'CMP-003', name:'Google Ads — Inverter', stage:'Draft', channel:'Google Ads', budget:30000, leads:0, owner:'Marketing Team', createdAt:'2025-02-01' }
 ];
 const campaignStages = ['Draft','Technical Review','Approval','Scheduled','Published','Result Analysis'];
 
 content.marketing = function() {
+  const totalLeads = campaigns.reduce((s,c)=>s+c.leads,0);
+  const totalBudget = campaigns.reduce((s,c)=>s+c.budget,0);
   return `
     <div class="cards">
       <div class="card"><h3>Active Campaigns</h3><div class="value">${campaigns.length}</div></div>
-      <div class="card"><h3>Total Budget</h3><div class="value">${formatBaht(campaigns.reduce((s,c)=>s+c.budget,0))}</div></div>
-      <div class="card"><h3>Total Leads</h3><div class="value">${campaigns.reduce((s,c)=>s+c.leads,0)}</div></div>
-      <div class="card"><h3>Published</h3><div class="value">${campaigns.filter(c=>c.stage==='Published').length}</div></div>
+      <div class="card"><h3>Total Budget</h3><div class="value">${formatBaht(totalBudget)}</div></div>
+      <div class="card"><h3>Total Leads</h3><div class="value">${totalLeads}</div></div>
+      <div class="card"><h3>Cost per Lead</h3><div class="value">${totalLeads > 0 ? formatBaht(Math.round(totalBudget/totalLeads)) : '—'}</div></div>
+    </div>
+    <div class="search-box">
+      <input type="text" placeholder="Search campaigns..." onkeyup="filterCampaigns(this.value)">
+      <button class="btn btn-primary" onclick="openNewCampaignModal()">+ New Campaign</button>
     </div>
     <div class="table-container">
-      <table>
-        <tr><th>Campaign</th><th>Channel</th><th>Budget</th><th>Leads</th><th>Stage</th></tr>
+      <table id="campaignsTable">
+        <tr><th>Campaign</th><th>Channel</th><th>Budget</th><th>Leads</th><th>Stage</th><th>Action</th></tr>
         ${campaigns.map(c => `
           <tr>
-            <td><strong>${c.name}</strong></td><td>${c.channel}</td>
-            <td>${formatBahtFull(c.budget)}</td><td>${c.leads}</td>
-            <td><span class="status ${c.stage==='Published'?'won':c.stage==='Draft'?'new':'progress'}">${c.stage}</span></td>
+            <td><strong>${c.name}</strong><br><span style="color:#666;font-size:11px">${c.id}</span></td>
+            <td>${c.channel}</td>
+            <td>${formatBahtFull(c.budget)}</td>
+            <td>${c.leads}</td>
+            <td><span class="status ${c.stage==='Published'?'won':c.stage==='Draft'?'new':c.stage==='Result Analysis'?'lost':'progress'}">${c.stage}</span></td>
+            <td>
+              <button class="btn btn-secondary" style="font-size:11px;padding:4px 8px" onclick="openCampaignDetail('${c.id}')">Detail</button>
+              ${campaignStages.indexOf(c.stage) < campaignStages.length - 1 ?
+                `<button class="btn btn-primary" style="font-size:11px;padding:4px 8px;margin-left:4px" onclick="advanceCampaign('${c.id}')">→ Next</button>` : ''}
+            </td>
           </tr>
         `).join('')}
       </table>
     </div>
+    <div style="margin-top:15px;padding:12px;background:#16213e;border-radius:10px">
+      <h4 style="font-size:12px;color:#888;margin-bottom:8px">Campaign Stages</h4>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${campaignStages.map((s,i) => `<span style="padding:4px 10px;background:#1a1a2e;border-radius:12px;font-size:11px;color:#888">${i+1}. ${s}</span>`).join('<span style="color:#666;font-size:11px;padding:0 2px">→</span>')}
+      </div>
+    </div>
   `;
 };
+
+function filterCampaigns(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#campaignsTable tr:not(:first-child)').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function openNewCampaignModal() {
+  openModal(`
+    <h3 style="margin-bottom:15px">➕ New Campaign</h3>
+    <div class="form-group"><label>Campaign Name</label><input type="text" id="newCmpName" placeholder="ชื่อ Campaign"></div>
+    <div class="form-group"><label>Channel</label><select id="newCmpChannel"><option>Facebook Ads</option><option>Google Ads</option><option>LINE OA</option><option>Event</option><option>Email</option><option>Referral Program</option></select></div>
+    <div class="form-group"><label>Budget (฿)</label><input type="number" id="newCmpBudget" value="50000" min="0"></div>
+    <button class="btn btn-primary" onclick="createNewCampaign()">Create Campaign</button>
+  `, false);
+}
+
+function createNewCampaign() {
+  const name = document.getElementById('newCmpName').value.trim();
+  if (!name) { alert('กรุณากรอกชื่อ Campaign'); return; }
+  campaigns.push({
+    id: 'CMP-' + String(campaigns.length + 1).padStart(3,'0'),
+    name,
+    stage: 'Draft',
+    channel: document.getElementById('newCmpChannel').value,
+    budget: parseInt(document.getElementById('newCmpBudget').value) || 0,
+    leads: 0,
+    owner: 'Marketing Team',
+    createdAt: new Date().toISOString().slice(0,10)
+  });
+  closeModal();
+  showPage('marketing');
+}
+
+function advanceCampaign(id) {
+  const cmp = campaigns.find(c => c.id === id);
+  if (!cmp) return;
+  const idx = campaignStages.indexOf(cmp.stage);
+  if (idx < campaignStages.length - 1) {
+    cmp.stage = campaignStages[idx + 1];
+  }
+  showPage('marketing');
+}
+
+function openCampaignDetail(id) {
+  const cmp = campaigns.find(c => c.id === id);
+  if (!cmp) return;
+  const currentIdx = campaignStages.indexOf(cmp.stage);
+  // Related deals (by lead count)
+  const relatedDeals = deals.filter(d => d.stage === 'Lead').slice(0, cmp.leads);
+
+  openModal(`
+    <div class="deal-header">
+      <h2>${cmp.name}</h2>
+      <span class="status ${cmp.stage==='Published'?'won':cmp.stage==='Draft'?'new':'progress'}">${cmp.stage}</span>
+    </div>
+    <div class="deal-meta">
+      <div class="deal-meta-item">Channel<span>${cmp.channel}</span></div>
+      <div class="deal-meta-item">Budget<span>${formatBahtFull(cmp.budget)}</span></div>
+      <div class="deal-meta-item">Leads Generated<span>${cmp.leads}</span></div>
+      <div class="deal-meta-item">Cost/Lead<span>${cmp.leads > 0 ? formatBahtFull(Math.round(cmp.budget/cmp.leads)) : '—'}</span></div>
+      <div class="deal-meta-item">Owner<span>${cmp.owner}</span></div>
+      <div class="deal-meta-item">Created<span>${cmp.createdAt}</span></div>
+    </div>
+    <div class="deal-section">
+      <div class="deal-section-title">Stage Progression</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">
+        ${campaignStages.map((s,i) => `<span style="padding:6px 12px;background:${i<=currentIdx?'#166534':'#1a1a2e'};color:${i<=currentIdx?'#4ade80':'#666'};border-radius:12px;font-size:11px;font-weight:${i===currentIdx?'bold':'normal'}">${s}</span>`).join('<span style="color:#666;padding:0 2px">→</span>')}
+      </div>
+      ${currentIdx < campaignStages.length - 1 ?
+        `<button class="btn btn-primary" onclick="advanceCampaign('${id}');openCampaignDetail('${id}')">→ Advance to ${campaignStages[currentIdx+1]}</button>` :
+        '<p style="color:#4ade80;font-size:12px">✅ Campaign completed all stages</p>'}
+    </div>
+    ${cmp.stage === 'Published' || cmp.stage === 'Result Analysis' ? `
+    <div class="deal-section">
+      <div class="deal-section-title">Add Leads</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="addLeadsCount" value="1" min="1" style="width:60px;padding:6px;background:#1a1a2e;border:1px solid #2a2a4e;border-radius:4px;color:#fff;font-size:12px">
+        <button class="btn btn-secondary" style="font-size:11px;padding:6px 10px" onclick="addCampaignLeads('${id}')">+ Add Leads</button>
+      </div>
+    </div>` : ''}
+  `, true);
+}
+
+function addCampaignLeads(id) {
+  const cmp = campaigns.find(c => c.id === id);
+  if (!cmp) return;
+  const count = parseInt(document.getElementById('addLeadsCount')?.value) || 1;
+  cmp.leads += count;
+  openCampaignDetail(id);
+}
 
 // ────────────────────────────
 // 14) SUPPORT (CONNECTED)
 // ────────────────────────────
 
-const tickets = [
-  { id:'TKT-001', subject:'Inverter Error Code E05', product:'INV-10KW', dealId:'DEAL-004', status:'Open', priority:'High', created:'2025-02-01' },
-  { id:'TKT-002', subject:'Panel Mounting Issue', product:'MNT-KIT', dealId:'DEAL-004', status:'In Progress', priority:'Medium', created:'2025-02-03' }
+let tickets = [
+  { id:'TKT-001', subject:'Inverter Error Code E05', product:'INV-10KW', dealId:'DEAL-004', customerId:'CUST-004', status:'Open', priority:'High', created:'2025-02-01', description:'Inverter แสดง Error E05 หลังติดตั้ง 3 วัน' },
+  { id:'TKT-002', subject:'Panel Mounting Issue', product:'MNT-KIT', dealId:'DEAL-004', customerId:'CUST-004', status:'In Progress', priority:'Medium', created:'2025-02-03', description:'Mounting kit ไม่พอดีกับหลังคาลูกค้า ต้องปรับแต่ง' }
 ];
 
 content.support = function() {
@@ -1111,27 +1336,123 @@ content.support = function() {
     <div class="cards">
       <div class="card"><h3>Open Tickets</h3><div class="value" style="color:#ef4444">${tickets.filter(t=>t.status==='Open').length}</div></div>
       <div class="card"><h3>In Progress</h3><div class="value" style="color:#fbbf24">${tickets.filter(t=>t.status==='In Progress').length}</div></div>
-      <div class="card"><h3>Resolved</h3><div class="value">${tickets.filter(t=>t.status==='Resolved').length}</div></div>
-      <div class="card"><h3>Total Tickets</h3><div class="value">${tickets.length}</div></div>
+      <div class="card"><h3>Resolved</h3><div class="value" style="color:#4ade80">${tickets.filter(t=>t.status==='Resolved').length}</div></div>
+      <div class="card"><h3>Avg Response (sim)</h3><div class="value">${tickets.length > 0 ? '2.4h' : '—'}</div></div>
+    </div>
+    <div class="search-box">
+      <input type="text" placeholder="Search tickets..." onkeyup="filterTickets(this.value)">
+      <button class="btn btn-primary" onclick="openNewTicketModal()">+ New Ticket</button>
     </div>
     <div class="table-container">
-      <table>
-        <tr><th>Ticket</th><th>Subject</th><th>Product</th><th>Deal</th><th>Priority</th><th>Status</th></tr>
+      <table id="ticketsTable">
+        <tr><th>Ticket</th><th>Subject</th><th>Product</th><th>Deal</th><th>Priority</th><th>Status</th><th>Action</th></tr>
         ${tickets.map(t => {
           const deal = deals.find(d => d.id === t.dealId);
           const prod = getProduct(t.product);
-          return `<tr ${t.dealId ? `style="cursor:pointer" onclick="openDealDetail('${t.dealId}')"` : ''}>
-            <td>${t.id}</td><td>${t.subject}</td>
+          return `<tr>
+            <td>${t.id}</td>
+            <td style="cursor:pointer" onclick="openTicketDetail('${t.id}')"><strong>${t.subject}</strong></td>
             <td>${prod?.name || t.product}</td>
-            <td>${deal?.name || '—'}</td>
+            <td ${t.dealId ? `style="cursor:pointer;color:#4ade80" onclick="openDealDetail('${t.dealId}')"` : ''}>${deal?.name || '—'}</td>
             <td><span class="status ${t.priority==='High'?'lost':t.priority==='Medium'?'progress':'new'}">${t.priority}</span></td>
             <td><span class="status ${t.status==='Resolved'?'won':t.status==='Open'?'lost':'progress'}">${t.status}</span></td>
+            <td>
+              ${t.status === 'Open' ? `<button class="btn btn-secondary" style="font-size:11px;padding:4px 8px" onclick="changeTicketStatus('${t.id}','In Progress')">→ Progress</button>` : ''}
+              ${t.status === 'In Progress' ? `<button class="btn btn-primary" style="font-size:11px;padding:4px 8px" onclick="changeTicketStatus('${t.id}','Resolved')">✓ Resolve</button>` : ''}
+              ${t.status === 'Resolved' ? '<span style="color:#4ade80;font-size:11px">✓ Done</span>' : ''}
+            </td>
           </tr>`;
         }).join('')}
+        ${tickets.length === 0 ? '<tr><td colspan="7" style="color:#666;text-align:center">No tickets yet</td></tr>' : ''}
       </table>
     </div>
   `;
 };
+
+function filterTickets(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#ticketsTable tr:not(:first-child)').forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function openNewTicketModal() {
+  const wonDeals = deals.filter(d => d.stage === 'Won');
+  openModal(`
+    <h3 style="margin-bottom:15px">🎧 New Support Ticket</h3>
+    <div class="form-group"><label>Subject</label><input type="text" id="newTktSubject" placeholder="ปัญหาที่พบ..."></div>
+    <div class="form-group"><label>Linked Deal</label><select id="newTktDeal"><option value="">— ไม่ระบุ —</option>${wonDeals.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Product</label><select id="newTktProduct"><option value="">— ไม่ระบุ —</option>${products.map(p=>`<option value="${p.sku}">${p.name}</option>`).join('')}</select></div>
+    <div class="form-group"><label>Priority</label><select id="newTktPriority"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+    <div class="form-group"><label>Description</label><textarea id="newTktDesc" placeholder="รายละเอียดปัญหา..."></textarea></div>
+    <button class="btn btn-primary" onclick="createNewTicket()">Create Ticket</button>
+  `, false);
+}
+
+function createNewTicket() {
+  const subject = document.getElementById('newTktSubject').value.trim();
+  if (!subject) { alert('กรุณากรอกหัวข้อ'); return; }
+  const dealId = document.getElementById('newTktDeal').value || null;
+  const deal = dealId ? deals.find(d => d.id === dealId) : null;
+  tickets.push({
+    id: 'TKT-' + String(tickets.length + 1).padStart(3,'0'),
+    subject,
+    product: document.getElementById('newTktProduct').value || '',
+    dealId: dealId,
+    customerId: deal ? deal.customerId : null,
+    status: 'Open',
+    priority: document.getElementById('newTktPriority').value,
+    created: new Date().toISOString().slice(0,10),
+    description: document.getElementById('newTktDesc').value.trim() || ''
+  });
+  if (dealId) {
+    logActivity(dealId, 'system', `Support ticket created: ${subject}`, 'System');
+  }
+  closeModal();
+  showPage('support');
+  updateNotifBadge();
+}
+
+function changeTicketStatus(id, newStatus) {
+  const tkt = tickets.find(t => t.id === id);
+  if (!tkt) return;
+  tkt.status = newStatus;
+  if (tkt.dealId) {
+    logActivity(tkt.dealId, 'system', `Ticket ${tkt.id}: ${newStatus}`, 'System');
+  }
+  showPage('support');
+  updateNotifBadge();
+}
+
+function openTicketDetail(id) {
+  const tkt = tickets.find(t => t.id === id);
+  if (!tkt) return;
+  const deal = tkt.dealId ? deals.find(d => d.id === tkt.dealId) : null;
+  const cust = tkt.customerId ? getCustomer(tkt.customerId) : (deal ? getCustomer(deal.customerId) : null);
+  const prod = tkt.product ? getProduct(tkt.product) : null;
+
+  openModal(`
+    <div class="deal-header">
+      <h2>${tkt.subject}</h2>
+      <span class="status ${tkt.status==='Resolved'?'won':tkt.status==='Open'?'lost':'progress'}">${tkt.status}</span>
+    </div>
+    <div class="deal-meta">
+      <div class="deal-meta-item">Ticket ID<span>${tkt.id}</span></div>
+      <div class="deal-meta-item">Priority<span style="color:${tkt.priority==='High'?'#ef4444':tkt.priority==='Medium'?'#fbbf24':'#60a5fa'}">${tkt.priority}</span></div>
+      <div class="deal-meta-item">Product<span>${prod?.name || '—'}</span></div>
+      <div class="deal-meta-item">Deal<span ${deal ? `style="cursor:pointer;color:#4ade80" onclick="openDealDetail('${deal.id}')"` : ''}>${deal?.name || '—'}</span></div>
+      <div class="deal-meta-item">Customer<span>${cust?.name || '—'}</span></div>
+      <div class="deal-meta-item">Created<span>${tkt.created}</span></div>
+    </div>
+    ${tkt.description ? `<div class="deal-section"><div class="deal-section-title">Description</div><p style="font-size:13px;color:#ccc;line-height:1.6">${tkt.description}</p></div>` : ''}
+    <div class="stage-actions" style="margin-top:15px">
+      ${tkt.status === 'Open' ? `<button class="stage-btn next" onclick="changeTicketStatus('${tkt.id}','In Progress');openTicketDetail('${tkt.id}')">→ In Progress</button>` : ''}
+      ${tkt.status === 'In Progress' ? `<button class="stage-btn win" onclick="changeTicketStatus('${tkt.id}','Resolved');openTicketDetail('${tkt.id}')">✓ Resolve</button>` : ''}
+      ${tkt.status === 'Resolved' ? '<span style="color:#4ade80;font-size:13px">✅ Ticket Resolved</span>' : ''}
+      ${tkt.status !== 'Resolved' ? `<button class="stage-btn lose" onclick="changeTicketStatus('${tkt.id}','Resolved');closeModal();showPage('support')">✕ Close</button>` : ''}
+    </div>
+  `, true);
+}
 
 // ────────────────────────────
 // 15) HR MODULE (PRESERVED)
@@ -1298,21 +1619,61 @@ content.calendar = function() {
   const monthName = today.toLocaleDateString('th-TH', {month:'long', year:'numeric'});
 
   const events = {};
-  // Map deal wonAt as events
-  deals.filter(d => d.wonAt).forEach(d => { const day = parseInt(d.wonAt.split('-')[2]); events[day] = events[day] || []; events[day].push('🎉 ' + d.name); });
-  // Map leave as events
-  leaveRequests.filter(l => l.status === 'Approved').forEach(l => { const day = parseInt(l.startDate.split('-')[2]); events[day] = events[day] || []; events[day].push('🏖️ ' + l.employee); });
+  function addEvt(dateStr, icon, text) {
+    if (!dateStr) return;
+    const parts = dateStr.split('-');
+    const m = parseInt(parts[1]) - 1;
+    const d = parseInt(parts[2]);
+    if (m === month && parseInt(parts[0]) === year) {
+      events[d] = events[d] || [];
+      events[d].push(icon + ' ' + text);
+    }
+  }
+
+  // Deal events
+  deals.forEach(d => {
+    addEvt(d.createdAt, '📋', d.name + ' created');
+    if (d.wonAt) addEvt(d.wonAt, '🎉', d.name + ' Won');
+  });
+  // PO ETAs
+  purchaseOrders.forEach(po => {
+    if (po.eta) addEvt(po.eta, '📦', po.id + ' ETA');
+  });
+  // Leave requests (approved)
+  leaveRequests.filter(l => l.status === 'Approved').forEach(l => {
+    addEvt(l.startDate, '🏖️', l.employee);
+  });
+  // Campaign events
+  campaigns.forEach(c => {
+    addEvt(c.createdAt, '📣', c.name);
+  });
+  // Support tickets
+  tickets.forEach(t => {
+    addEvt(t.created, '🎧', t.id);
+  });
 
   let cells = '';
-  for (let i = 0; i < firstDay; i++) cells += '<div class="cal-day"></div>';
+  for (let i = 0; i < firstDay; i++) cells += '<div class="cal-day empty"></div>';
   for (let d = 1; d <= daysInMonth; d++) {
     const isToday = d === today.getDate();
     const evts = events[d] || [];
-    cells += `<div class="cal-day ${isToday?'today':''}">${d}${evts.map(e=>`<div class="cal-event">${e}</div>`).join('')}</div>`;
+    cells += `<div class="cal-day ${isToday?'today':''}">
+      <span class="cal-day-num">${d}</span>
+      ${evts.slice(0, 3).map(e=>`<div class="cal-event">${e}</div>`).join('')}
+      ${evts.length > 3 ? `<div style="font-size:9px;color:#888;margin-top:2px">+${evts.length-3} more</div>` : ''}
+    </div>`;
   }
 
   return `
-    <div style="margin-bottom:15px;font-size:16px;font-weight:bold">${monthName}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+      <div style="font-size:16px;font-weight:bold">${monthName}</div>
+      <div style="display:flex;gap:6px">
+        <span style="padding:3px 8px;background:#166534;color:#4ade80;border-radius:8px;font-size:10px">🎉 Won</span>
+        <span style="padding:3px 8px;background:#1e40af;color:#60a5fa;border-radius:8px;font-size:10px">📋 Deal</span>
+        <span style="padding:3px 8px;background:#854d0e;color:#fbbf24;border-radius:8px;font-size:10px">📦 PO</span>
+        <span style="padding:3px 8px;background:#4a1d7a;color:#c084fc;border-radius:8px;font-size:10px">🏖️ Leave</span>
+      </div>
+    </div>
     <div class="calendar-grid">
       <div class="cal-header">Sun</div><div class="cal-header">Mon</div><div class="cal-header">Tue</div>
       <div class="cal-header">Wed</div><div class="cal-header">Thu</div><div class="cal-header">Fri</div><div class="cal-header">Sat</div>
@@ -1380,4 +1741,5 @@ content.peak = function() {
 // ────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
   showPage('dashboard');
+  updateNotifBadge();
 });
